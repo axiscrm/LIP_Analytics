@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Error — LIP Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f9fafb;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:40px;max-width:480px;width:100%;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.icon{width:48px;height:48px;background:rgba(180,35,24,.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;color:#B42318}
+h1{font-size:18px;font-weight:700;color:#101828;margin-bottom:8px}
+p{font-size:14px;color:#667085;line-height:1.6;margin-bottom:24px}
+.code{font-size:12px;font-family:monospace;background:#f2f4f7;border-radius:6px;padding:10px 14px;color:#667085;text-align:left;word-break:break-all;margin-bottom:24px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 16px;background:#1b1d23;color:#fff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;border:none;font-family:inherit;transition:background .15s}
+.btn:hover:not(:disabled){background:#2d3748}
+.btn:disabled{background:#6b7280;cursor:not-allowed}
+.hint{font-size:12px;color:#9ca3af;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3L20 18H2L11 3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M11 9v4M11 14.5h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+  </div>
+  <h1>Something went wrong</h1>
+  <p>The dashboard couldn't load for the selected period. This is usually a temporary database connection issue that clears in a few seconds.</p>
+  {% if error_msg %}
+  <div class="code">{{ error_msg }}</div>
+  {% endif %}
+  <button class="btn" id="back-btn" disabled onclick="goBack()">← Back to dashboard (<span id="cd">3</span>)</button>
+  <p class="hint">Waiting briefly for the database connection to free up…</p>
+</div>
+<script>
+let s=3;
+const btn=document.getElementById('back-btn');
+const cd=document.getElementById('cd');
+const t=setInterval(()=>{
+  s--;
+  if(s<=0){clearInterval(t);btn.disabled=false;btn.innerHTML='← Back to dashboard';}
+  else{cd.textContent=s;}
+},1000);
+function goBack(){
+  // cache-bust so Flask always serves a fresh page, never a browser-cached error
+  window.location.href='/?tab=perf&_t='+Date.now();
+}
+</script>
+</body>
+</html>

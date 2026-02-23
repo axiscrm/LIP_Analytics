@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LIP Performance</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#D34108;--orange2:#EA6921;--header:#1b1d23;
+  --slate1:#2d3f52;--slate2:#4d6175;--slate3:#8a97a8;--slate4:#bcc4ce;
+  --g25:#FCFCFD;--g50:#F9FAFB;--g100:#F2F4F7;--g200:#EAECF0;
+  --g300:#D0D5DD;--g400:#98A2B3;--g500:#667085;--g600:#475467;--g700:#344054;--g900:#101828;
+  --sh-sm:0 1px 2px rgba(16,24,40,.06);--sh-md:0 4px 8px -2px rgba(16,24,40,.1);
+  --sh-lg:0 20px 40px -8px rgba(16,24,40,.22);--r:8px;--r-sm:6px;
+  --on-color:#12B76A;--on-bg:rgba(18,183,106,.1);--on-glow:18,183,106;
+  --near-color:#EAB308;--near-bg:rgba(234,179,8,.1);--near-glow:234,179,8;
+  --below-color:#B42318;--below-bg:rgba(180,35,24,.08);--below-glow:180,35,24;
+}
+body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.shell{display:flex;flex-direction:column;min-height:100vh}
+
+/* Loading */
+.loading-overlay{position:fixed;inset:0;background:rgba(27,29,35,.82);backdrop-filter:blur(4px);z-index:3000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.loading-overlay.active{opacity:1;pointer-events:all}
+.loading-card{background:#fff;border-radius:16px;padding:36px 48px;display:flex;flex-direction:column;align-items:center;gap:18px;box-shadow:var(--sh-lg)}
+.loading-spinner{width:44px;height:44px;border:3px solid rgba(211,65,8,.15);border-top-color:#D34108;border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-dots{display:flex;gap:7px}
+.loading-dots span{width:7px;height:7px;border-radius:50%;background:var(--g300);animation:dot-pulse 1.4s ease-in-out infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dot-pulse{0%,80%,100%{background:var(--g300);transform:scale(.85)}40%{background:#D34108;transform:scale(1)}}
+.loading-label{font-size:14px;font-weight:600;color:var(--g700)}
+.loading-sub{font-size:12px;color:var(--g400);margin-top:-10px}
+
+/* Topbar */
+.topbar{background:var(--header);height:60px;display:flex;align-items:center;padding:0 24px;gap:16px}
+.axis-logo{height:20px;width:auto;display:block;flex-shrink:0}
+.topbar-divider{width:1px;height:26px;background:rgba(255,255,255,.12);flex-shrink:0}
+.topbar-name{color:#fff;font-size:13px;font-weight:500;letter-spacing:.1px}
+.topbar-spacer{flex:1}
+.topbar-meta{font-size:12px;font-weight:500;color:rgba(255,255,255,.55);white-space:nowrap;padding-left:16px}
+
+/* Toolbar */
+.toolbar{background:#fff;border-bottom:1px solid var(--g200);padding:10px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative}
+.toolbar-label{font-size:13px;font-weight:500;color:var(--g600);white-space:nowrap}
+.toolbar-sep{width:1px;height:20px;background:var(--g200);margin:0 4px;flex-shrink:0}
+.toolbar input[type=date],.toolbar select{height:34px;padding:0 10px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;color:var(--g700);background:#fff;outline:none;cursor:pointer;accent-color:#D34108}
+input[type=date]{accent-color:#D34108}
+.date-popover-field input{accent-color:#D34108}
+input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer}
+input[type=date]::-webkit-datetime-edit-day-field:focus,
+input[type=date]::-webkit-datetime-edit-month-field:focus,
+input[type=date]::-webkit-datetime-edit-year-field:focus{background:#D34108;color:#fff;border-radius:2px}
+.toolbar select{padding-right:26px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2398A2B3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.toolbar input[type=date]:focus,.toolbar select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+/* Period button */
+.period-btn{gap:6px;font-variant-numeric:tabular-nums;min-width:200px;justify-content:flex-start}
+/* Date-range popover */
+.date-popover{position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:#fff;border:1px solid var(--g200);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:16px;width:340px;display:none}
+.date-popover.open{display:block}
+.date-popover-title{font-size:13px;font-weight:600;color:var(--g900);margin-bottom:12px}
+.date-popover-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.date-popover-field label{display:block;font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.date-popover-field input{width:100%;height:34px;padding:0 8px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;color:var(--g700);box-sizing:border-box;outline:none}
+.date-popover-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.date-popover-field input:invalid,.date-popover-field input.out-of-range{border-color:#F04438}
+.date-popover-warn{display:flex;align-items:center;gap:6px;font-size:12px;color:#B42318;background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.15);border-radius:6px;padding:7px 10px;margin-bottom:10px}
+.date-popover-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:6px;border-top:1px solid var(--g100)}
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1D2939;color:#fff;border-radius:8px;padding:12px 18px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;z-index:4000;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.toast-icon{flex-shrink:0;color:#FDB022}
+.btn{height:34px;padding:0 12px;border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all .12s}
+.btn-primary{background:var(--orange);color:#fff}.btn-primary:hover{background:var(--orange2)}
+.btn-ghost{background:#fff;color:var(--g700);border:1px solid var(--g300)}.btn-ghost:hover{background:var(--g50);border-color:var(--g400)}
+.btn-ghost.active-filter{background:var(--orange);color:#fff;border-color:var(--orange)}
+
+/* Tabs */
+.tabs{background:#fff;border-bottom:1px solid var(--g200);padding:0 24px;display:flex}
+.tab{padding:12px 4px;margin-right:20px;font-size:14px;font-weight:500;color:var(--g500);cursor:pointer;border-bottom:2px solid transparent;user-select:none;white-space:nowrap}
+.tab.active{color:var(--orange);border-bottom-color:var(--orange);font-weight:600}
+.content{padding:24px;flex:1}.panel{display:none}.panel.active{display:block}
+.section-heading{font-size:15px;font-weight:700;color:var(--g900);margin-bottom:16px;letter-spacing:-.2px}
+
+/* Legend */
+.legend{display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--g500);font-weight:500}
+
+/* Tables */
+.table-outer{background:#fff;border:1px solid var(--g200);border-radius:var(--r);box-shadow:var(--sh-sm);overflow:hidden;margin-bottom:28px}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:800px}
+thead tr{background:var(--g50);border-bottom:1px solid var(--g200)}
+th{padding:10px 14px;text-align:right;font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;position:relative;overflow:visible}
+th:first-child{text-align:left;position:sticky;left:0;background:var(--g50);z-index:2}
+.th-inner{display:inline-flex;align-items:center;gap:5px;justify-content:flex-end}
+th:first-child .th-inner{justify-content:flex-start}
+tbody tr{border-bottom:1px solid var(--g100)}.tbody tr:hover{background:var(--g25)}
+td{padding:13px 14px;text-align:right;font-size:13px;color:var(--g700);white-space:nowrap}
+td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1}
+tbody tr:hover td:first-child{background:var(--g25)}
+tfoot tr{border-top:2px solid var(--g200);background:var(--g50)}
+tfoot td{padding:11px 14px;font-size:13px;font-weight:700;color:var(--header);text-align:right}
+tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text-align:left}
+
+/* Avatar */
+.avatar-cell{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--g200)}
+.avatar-fallback{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.adviser-name{font-weight:600;color:var(--g900);font-size:13px}
+
+/* Conversion rate cells */
+.conv-cell{font-size:12px;font-weight:600;color:var(--g600)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600;line-height:1.6;min-width:72px;box-sizing:border-box}
+/* Per-metric min-widths so badges in same column stay consistent */
+[data-badge="talk"]{min-width:68px}
+[data-badge="qpd"]{min-width:48px}
+[data-badge="apd"]{min-width:48px}
+[data-badge="inf"]{min-width:90px}
+@keyframes badge-glow-on{0%,100%{box-shadow:0 0 0 0 rgba(var(--on-glow),.3)}55%{box-shadow:0 0 5px 2px rgba(var(--on-glow),0)}}
+@keyframes badge-glow-near{0%,100%{box-shadow:0 0 0 0 rgba(var(--near-glow),.3)}55%{box-shadow:0 0 5px 2px rgba(var(--near-glow),0)}}
+@keyframes badge-glow-below{0%,100%{box-shadow:0 0 0 0 rgba(var(--below-glow),.3)}55%{box-shadow:0 0 5px 2px rgba(var(--below-glow),0)}}
+.badge-on{background:var(--on-bg);color:var(--on-color);animation:badge-glow-on 3s ease-in-out infinite}
+.badge-near{background:var(--near-bg);color:var(--near-color);animation:badge-glow-near 3s ease-in-out infinite}
+.badge-below{background:var(--below-bg);color:var(--below-color);animation:badge-glow-below 3s ease-in-out infinite}
+.badge-neutral{background:transparent;color:var(--g700)}
+/* server-rendered legacy */
+.badge-green{background:var(--on-bg);color:var(--on-color);animation:badge-glow-on 3s ease-in-out infinite}
+.badge-orange{background:var(--near-bg);color:var(--near-color);animation:badge-glow-near 3s ease-in-out infinite}
+.badge-red{background:var(--below-bg);color:var(--below-color);animation:badge-glow-below 3s ease-in-out infinite}
+
+/* Tooltip */
+.tip-wrap{position:relative;display:inline-flex;align-items:center;margin-left:4px}
+.info-icon{width:13px;height:13px;cursor:default;color:var(--g400);flex-shrink:0}
+.tip{display:none;position:fixed;z-index:9999;background:var(--g900);color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:6px;width:220px;white-space:normal;text-align:left;box-shadow:var(--sh-md);pointer-events:none}
+
+/* Beacons */
+@keyframes pulse-on  {0%,100%{box-shadow:0 0 0 0 rgba(var(--on-glow),.55)}70%{box-shadow:0 0 0 7px rgba(var(--on-glow),0)}}
+@keyframes pulse-near{0%,100%{box-shadow:0 0 0 0 rgba(var(--near-glow),.55)}70%{box-shadow:0 0 0 7px rgba(var(--near-glow),0)}}
+@keyframes pulse-below{0%,100%{box-shadow:0 0 0 0 rgba(var(--below-glow),.55)}70%{box-shadow:0 0 0 7px rgba(var(--below-glow),0)}}
+.beacon{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.beacon-on  {background:var(--on-color);animation:pulse-on   2s infinite}
+.beacon-near{background:var(--near-color);animation:pulse-near 2s infinite}
+.beacon-below{background:var(--below-color);animation:pulse-below 2s infinite}
+.beacon-green{background:var(--on-color);animation:pulse-on 2s infinite}
+.beacon-amber,.beacon-yellow{background:var(--near-color);animation:pulse-near 2s infinite}
+.beacon-red{background:var(--below-color);animation:pulse-below 2s infinite}
+
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.chart-card{background:#fff;border:1px solid var(--g200);border-radius:var(--r);padding:18px 18px 14px;box-shadow:var(--sh-sm)}
+.chart-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px}
+.chart-card-label{font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.5px}
+.chart-card-total{font-size:22px;font-weight:700;color:var(--g900);letter-spacing:-.5px;line-height:1.15;margin-bottom:2px}
+.chart-card-sub{font-size:11px;color:var(--g400);margin-bottom:14px}
+.chart-wrap{position:relative;height:210px}
+
+/* ── Targets Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(16,24,40,.5);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;opacity:0;pointer-events:none;transition:opacity .18s;overflow-y:auto}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:12px;box-shadow:var(--sh-lg);width:580px;max-width:100%;transform:translateY(10px);transition:transform .18s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--g200);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.modal-title{font-size:16px;font-weight:700;color:var(--g900)}
+.modal-title-sub{font-size:12px;color:var(--g500);margin-top:2px}
+.modal-close{width:32px;height:32px;border-radius:6px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--g400);flex-shrink:0;margin-top:2px}
+.modal-close:hover{background:var(--g100);color:var(--g700)}
+.modal-body{padding:20px 24px 0}
+.modal-section-title{font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.6px;margin:20px 0 12px}
+.modal-section-title:first-child{margin-top:0}
+.modal-divider{height:1px;background:var(--g100);margin:20px 0}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--g200);display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.tgt-row{display:grid;gap:10px;margin-bottom:10px}
+.tgt-2col{grid-template-columns:1fr 1fr}
+.tgt-field label{font-size:12px;font-weight:600;color:var(--g700);display:block;margin-bottom:4px}
+.tgt-field input[type=number]{width:100%;height:34px;padding:0 10px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;color:var(--g700);outline:none}
+.tgt-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.tgt-hint{font-size:11px;color:var(--g400);margin-top:3px}
+
+/* ── Targets rows — input narrow, colours+toggle stacked below ── */
+.tgt-line-row{margin-bottom:10px;border:1px solid var(--g200);border-radius:var(--r-sm);padding:12px}
+.tgt-line-row .tgt-field{margin:0 0 6px}
+.tgt-field input[type=number]{width:88px;height:30px;padding:0 8px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:12px;color:var(--g700);outline:none}
+.tgt-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.tgt-row-bottom{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px}
+.tgt-color-group{display:flex;align-items:center;gap:6px}
+.tgt-color-label{font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+
+/* Toggle */
+.toggle-wrap{display:flex;align-items:center;gap:8px;height:34px;flex-shrink:0}
+.toggle{position:relative;display:inline-flex;align-items:center;cursor:pointer;user-select:none}
+.toggle input{position:absolute;opacity:0;width:0;height:0}
+.toggle-track{width:36px;height:20px;background:var(--g300);border-radius:10px;transition:background .15s;display:block;flex-shrink:0}
+.toggle input:checked~.toggle-track{background:var(--orange)}
+.toggle-thumb{position:absolute;left:2px;top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);pointer-events:none}
+.toggle input:checked~.toggle-track+.toggle-thumb,.toggle input:checked~.toggle-track~.toggle-thumb{transform:translateX(16px)}
+.toggle-label{font-size:12px;font-weight:500;color:var(--g600);white-space:nowrap;margin-left:4px}
+
+/* ── Threshold blocks — inputs in row, colour+toggle stacked below ── */
+.thr-block{border:1px solid var(--g200);border-radius:var(--r-sm);padding:14px;margin-bottom:10px}
+.thr-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.thr-label{font-size:13px;font-weight:600;color:var(--g900);display:flex;align-items:center;gap:8px}
+.thr-inputs-row{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.thr-field-narrow{flex:0 0 auto}
+.thr-field-narrow label{display:block;font-size:10px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap}
+.thr-field-narrow input[type=number]{width:88px;height:30px;padding:0 8px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:12px;color:var(--g700);outline:none}
+.thr-field-narrow input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.thr-bottom-row{display:flex;align-items:center;gap:14px;padding-top:10px;border-top:1px solid var(--g100)}
+.thr-enabled-row{display:flex;align-items:center;gap:8px}
+/* toggle always first in bottom row */
+.thr-bottom-row .thr-enabled-row{order:-1}
+.thr-color-wrap{display:flex;align-items:center;gap:6px}
+.color-preview{width:26px;height:26px;border-radius:6px;border:2px solid var(--g200);cursor:pointer;overflow:hidden;position:relative;flex-shrink:0}
+.color-preview input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
+
+/* Scrollbars — thin, auto-hide when not hovered */
+.table-scroll{scrollbar-width:thin;scrollbar-color:transparent transparent;}
+.table-scroll:hover{scrollbar-color:var(--g300) transparent;}
+.table-scroll::-webkit-scrollbar{height:4px;}
+.table-scroll::-webkit-scrollbar-track{background:transparent;}
+.table-scroll::-webkit-scrollbar-thumb{background:transparent;border-radius:4px;transition:background .25s;}
+.table-scroll:hover::-webkit-scrollbar-thumb{background:var(--g300);}
+.tabs{scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+
+/* Period button — orange when popover is open */
+.period-btn.popover-open{background:var(--orange);color:#fff;border-color:var(--orange);}
+.period-btn.popover-open:hover{background:var(--orange2);}
+
+/* Targets text — hide on mobile */
+.targets-text{display:inline;}
+
+/* Column group shading removed */
+@media(max-width:768px){
+  /* Header */
+  .topbar{padding:0 14px;gap:10px;height:52px}
+  .topbar-meta{display:none}
+  /* Toolbar */
+  .toolbar{padding:10px 14px;gap:6px;flex-wrap:wrap}
+  .toolbar input[type=date]{flex:1;min-width:120px}
+  .toolbar-sep{display:none}
+  .toolbar-label{display:none}
+  .targets-text{display:none}
+  /* Adviser select full width */
+  #adviser-select{width:100%;flex-basis:100%;order:10;height:38px;font-size:14px}
+  /* Tabs */
+  .tabs{padding:0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab{padding:10px 12px;margin-right:12px;font-size:13px;white-space:nowrap}
+  /* Content — consistent side padding */
+  .content{padding:12px 14px}
+  /* Charts — explicitly pinned to viewport width so wide tables don't inflate them */
+  .chart-grid{grid-template-columns:1fr;gap:12px;width:calc(100vw - 28px);box-sizing:border-box}
+  .chart-card{width:100%;box-sizing:border-box;min-width:0}
+  /* Tables — scroll horizontally within their own box */
+  .table-outer{width:calc(100vw - 28px);box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* Legend — left padding so beacon isn't clipped */
+  .legend{gap:10px;padding-left:4px}
+  /* Modal */
+  .modal-overlay{padding:0;align-items:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .modal{width:100%;border-radius:0;min-height:100vh;transform:none}
+  .modal-body{overflow-y:visible}
+  /* Targets modal layout adjustments */
+  .tgt-2col{grid-template-columns:1fr}
+  .thr-inputs-row{gap:6px}
+  .tgt-line-row{margin-bottom:10px}
+  .tgt-color-label{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay active" id="loading-overlay">
+  <div class="loading-card">
+    <div class="loading-spinner"></div>
+    <div class="loading-label">Refreshing data</div>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <div class="loading-sub">Please wait…</div>
+  </div>
+</div>
+
+<div class="shell">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <!-- AXIS logo -->
+  <svg height="22" viewBox="0 0 119 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+    <defs><linearGradient id="lg1" x1="16" y1="31.9" x2="16" y2="-.1" gradientTransform="translate(0 31.9) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#0a0d12"/></linearGradient></defs>
+    <path fill="#ff4405" d="M0,12.8C0,8.32,0,6.08.87,4.37c.77-1.51,1.99-2.73,3.5-3.5C6.08,0,8.32,0,12.8,0h6.4C23.68,0,25.92,0,27.63.87c1.51.77,2.73,1.99,3.5,3.5.87,1.71.87,3.95.87,8.43v6.4c0,4.48,0,6.72-.87,8.43-.77,1.51-1.99,2.73-3.5,3.5-1.71.87-3.95.87-8.43.87h-6.4c-4.48,0-6.72,0-8.43-.87-1.51-.77-2.73-1.99-3.5-3.5C0,25.92,0,23.68,0,19.2v-6.4Z"/>
+    <path fill="url(#lg1)" fill-opacity=".2" d="M0,12.8C0,8.32,0,6.08.87,4.37c.77-1.51,1.99-2.73,3.5-3.5C6.08,0,8.32,0,12.8,0h6.4C23.68,0,25.92,0,27.63.87c1.51.77,2.73,1.99,3.5,3.5.87,1.71.87,3.95.87,8.43v6.4c0,4.48,0,6.72-.87,8.43-.77,1.51-1.99,2.73-3.5,3.5-1.71.87-3.95.87-8.43.87h-6.4c-4.48,0-6.72,0-8.43-.87-1.51-.77-2.73-1.99-3.5-3.5C0,25.92,0,23.68,0,19.2v-6.4Z"/>
+    <path fill="#fff" d="M13.43,15.89l-9.43,10.27h4.86L28,5.35h-4.99l-7.08,7.63-7.08-7.63h-4.86l9.43,10.54Z"/>
+    <path fill="#fff" d="M23.01,26.16h4.99l-9.16-9.85c-1.44,2.37-.88,4.23-.42,4.86l4.58,4.99Z"/>
+    <path fill="#d7490d" d="M63.66,5.14v21.23h-3.82V10.09l-12.88,16.28h-4.95L58.56,5.14h5.1Z"/>
+    <path fill="#d7490d" d="M75.55,15.9l-9.62,10.47h4.95l19.53-21.23h-5.1l-7.22,7.78-7.22-7.78h-4.95l9.62,10.76Z"/>
+    <path fill="#d7490d" d="M85.31,26.37h5.1l-9.34-10.05c-1.47,2.42-.9,4.31-.42,4.95l4.67,5.1Z"/>
+    <path fill="#d7490d" d="M96.78,26.37h-3.82V5.14h3.82v21.23Z"/>
+    <path fill="#d7490d" d="M99.33,26.37h14.01c1.89,0,5.66-1.25,5.66-6.23s-3.78-6.13-5.66-6.09h-7.93c-.43,0-2.41-.42-2.41-2.69s1.7-2.69,2.41-2.69h13.59v-3.54h-14.3c-1.84,0-5.38,1.27-5.38,6.23,0,3.96,3.54,6.51,5.38,6.51h8.63c.66,0,1.98.45,1.98,2.26s-1.32,2.45-1.98,2.55h-14.01v3.68Z"/>
+  </svg>
+  <!-- Divider -->
+  <div class="topbar-divider"></div>
+  <!-- LIP logo (all paths in white) -->
+  <svg height="22" viewBox="0 0 142 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M16.1512 15.6543C12.2152 15.6543 9.0177 18.8444 9.0177 22.7807C9.0177 26.7107 12.2143 29.9017 16.1512 29.9017H19.2438C20.4887 29.9017 21.4978 30.9091 21.4978 32.1517C21.4978 33.3944 20.4887 34.4017 19.2438 34.4017H16.1512C9.72465 34.4017 4.50977 29.196 4.50977 22.7807C4.50977 16.3608 9.72379 11.1543 16.1512 11.1543H19.2438C20.4887 11.1543 21.4978 12.1617 21.4978 13.4043C21.4978 14.6469 20.4887 15.6543 19.2438 15.6543H16.1512Z" fill="white"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M14.2359 4.01172C14.2359 2.76908 15.2451 1.76172 16.4899 1.76172H19.577C26.0083 1.76172 31.224 6.96655 31.224 13.3827C31.224 14.9095 30.9227 16.4214 30.3374 17.8319C29.7521 19.2425 28.8942 20.5242 27.8127 21.6038C26.7312 22.6834 25.4472 23.5398 24.0341 24.1241C22.6211 24.7084 21.1065 25.0091 19.577 25.0091H16.4844C15.2396 25.0091 14.2305 24.0018 14.2305 22.7591C14.2305 21.5165 15.2396 20.5091 16.4844 20.5091H19.577C20.5146 20.5091 21.4429 20.3248 22.309 19.9667C23.1752 19.6085 23.9622 19.0836 24.6251 18.4218C25.288 17.7601 25.8138 16.9745 26.1726 16.1099C26.5314 15.2452 26.716 14.3185 26.716 13.3827C26.716 9.45354 23.5203 6.26172 19.577 6.26172H16.4899C15.2451 6.26172 14.2359 5.25436 14.2359 4.01172Z" fill="white"/>
+    <path d="M43.775 13.7453H47.9877V15.8243H41.5977V4.79925H43.775V13.7453Z" fill="white"/>
+    <path d="M50.1397 7.00425C49.8031 7.00425 49.5086 6.8835 49.2562 6.642C49.0142 6.39 48.8933 6.096 48.8933 5.76C48.8933 5.424 49.0142 5.13 49.2562 4.878C49.5086 4.626 49.8031 4.5 50.1397 4.5C50.4868 4.5 50.7814 4.626 51.0233 4.878C51.2757 5.13 51.4019 5.424 51.4019 5.76C51.4019 6.096 51.2757 6.39 51.0233 6.642C50.7814 6.8835 50.4868 7.00425 50.1397 7.00425ZM49.1299 15.8243V7.94925H51.1653V15.8243H49.1299Z" fill="white"/>
+    <path d="M57.2724 6.53175C56.1574 6.44775 55.5999 6.894 55.5999 7.8705V7.94925H57.2724V9.90225H55.5999V15.8243H53.5646V9.90225H52.4286V7.94925H53.5646V7.8705C53.5646 6.7575 53.8749 5.91225 54.4955 5.33475C55.1161 4.75725 56.0417 4.50525 57.2724 4.57875V6.53175Z" fill="white"/>
+    <path d="M59.6323 12.7215C59.9058 13.7085 60.6473 14.202 61.8569 14.202C62.6353 14.202 63.2243 13.9395 63.6241 13.4145L65.2649 14.3595C64.4866 15.483 63.3401 16.0448 61.8254 16.0448C60.5211 16.0448 59.4745 15.651 58.6856 14.8635C57.8967 14.076 57.5023 13.0838 57.5023 11.8868C57.5023 10.7003 57.8915 9.71325 58.6698 8.92575C59.4482 8.12775 60.4475 7.72875 61.6676 7.72875C62.8246 7.72875 63.7766 8.12775 64.5234 8.92575C65.2807 9.72375 65.6594 10.7108 65.6594 11.8868C65.6594 12.1493 65.6331 12.4275 65.5805 12.7215H59.6323ZM59.6007 11.1465H63.6241C63.5083 10.611 63.2664 10.212 62.8983 9.9495C62.5406 9.687 62.1304 9.55575 61.6676 9.55575C61.1206 9.55575 60.6683 9.6975 60.3107 9.981C59.9531 10.254 59.7164 10.6425 59.6007 11.1465Z" fill="white"/>
+    <path d="M71.1194 4.79925H73.2967V15.8243H71.1194V4.79925Z" fill="white"/>
+    <path d="M79.6327 7.72875C80.4952 7.72875 81.2052 8.0175 81.7627 8.595C82.3307 9.1725 82.6147 9.9705 82.6147 10.989V15.8243H80.5794V11.241C80.5794 10.716 80.4374 10.317 80.1534 10.044C79.8694 9.7605 79.4907 9.61875 79.0174 9.61875C78.4914 9.61875 78.0707 9.7815 77.7551 10.107C77.4396 10.4325 77.2818 10.9208 77.2818 11.5718V15.8243H75.2465V7.94925H77.2818V8.83125C77.7762 8.09625 78.5598 7.72875 79.6327 7.72875Z" fill="white"/>
+    <path d="M86.2302 10.1858C86.2302 10.3958 86.3669 10.569 86.6404 10.7055C86.9244 10.8315 87.2662 10.947 87.6659 11.052C88.0656 11.1465 88.4653 11.2725 88.865 11.43C89.2647 11.577 89.6013 11.829 89.8748 12.186C90.1588 12.543 90.3008 12.9893 90.3008 13.5248C90.3008 14.3333 89.9958 14.958 89.3857 15.399C88.7862 15.8295 88.0341 16.0448 87.1295 16.0448C85.5096 16.0448 84.4052 15.42 83.8162 14.1705L85.5833 13.1783C85.8147 13.8608 86.3301 14.202 87.1295 14.202C87.8553 14.202 88.2182 13.9763 88.2182 13.5248C88.2182 13.3148 88.0762 13.1468 87.7922 13.0208C87.5187 12.8843 87.1821 12.7635 86.7824 12.6585C86.3827 12.5535 85.983 12.4223 85.5833 12.2648C85.1836 12.1073 84.8417 11.8605 84.5577 11.5245C84.2842 11.178 84.1475 10.7475 84.1475 10.233C84.1475 9.456 84.4315 8.847 84.9995 8.406C85.578 7.9545 86.2933 7.72875 87.1453 7.72875C87.7869 7.72875 88.3707 7.87575 88.8966 8.16975C89.4225 8.45325 89.838 8.86275 90.143 9.39825L88.4075 10.3433C88.155 9.80775 87.7343 9.54 87.1453 9.54C86.8823 9.54 86.6614 9.59775 86.4826 9.71325C86.3143 9.82875 86.2302 9.98625 86.2302 10.1858Z" fill="white"/>
+    <path d="M96.8164 7.94925H98.8518V15.8243H96.8164V14.9423C96.3221 15.6773 95.5384 16.0448 94.4655 16.0448C93.603 16.0448 92.8878 15.756 92.3198 15.1785C91.7623 14.601 91.4835 13.803 91.4835 12.7845V7.94925H93.5189V12.5325C93.5189 13.0575 93.6609 13.4618 93.9449 13.7453C94.2289 14.0183 94.6075 14.1548 95.0809 14.1548C95.6068 14.1548 96.0275 13.992 96.3431 13.6665C96.6586 13.341 96.8164 12.8527 96.8164 12.2018V7.94925Z" fill="white"/>
+    <path d="M102.751 9.30375C102.941 8.79975 103.251 8.42175 103.682 8.16975C104.124 7.91775 104.613 7.79175 105.149 7.79175V10.0598C104.529 9.98625 103.971 10.1123 103.477 10.4378C102.993 10.7633 102.751 11.304 102.751 12.06V15.8243H100.716V7.94925H102.751V9.30375Z" fill="white"/>
+    <path d="M112.043 7.94925H114.078V15.8243H112.043V14.895C111.433 15.6615 110.575 16.0448 109.471 16.0448C108.419 16.0448 107.514 15.6458 106.757 14.8478C106.01 14.0393 105.637 13.0523 105.637 11.8868C105.637 10.7213 106.01 9.7395 106.757 8.9415C107.514 8.133 108.419 7.72875 109.471 7.72875C110.575 7.72875 111.433 8.112 112.043 8.8785V7.94925ZM108.287 13.4933C108.698 13.9028 109.218 14.1075 109.849 14.1075C110.481 14.1075 111.001 13.9028 111.411 13.4933C111.832 13.0733 112.043 12.5378 112.043 11.8868C112.043 11.2358 111.832 10.7055 111.411 10.296C111.001 9.876 110.481 9.666 109.849 9.666C109.218 9.666 108.698 9.876 108.287 10.296C107.877 10.7055 107.672 11.2358 107.672 11.8868C107.672 12.5378 107.877 13.0733 108.287 13.4933Z" fill="white"/>
+    <path d="M120.31 7.72875C121.172 7.72875 121.882 8.0175 122.44 8.595C123.008 9.1725 123.292 9.9705 123.292 10.989V15.8243H121.256V11.241C121.256 10.716 121.114 10.317 120.83 10.044C120.546 9.7605 120.168 9.61875 119.694 9.61875C119.169 9.61875 118.748 9.7815 118.432 10.107C118.117 10.4325 117.959 10.9208 117.959 11.5718V15.8243H115.924V7.94925H117.959V8.83125C118.453 8.09625 119.237 7.72875 120.31 7.72875Z" fill="white"/>
+    <path d="M128.785 16.0448C127.596 16.0448 126.602 15.6458 125.803 14.8478C125.014 14.0498 124.619 13.0628 124.619 11.8868C124.619 10.7108 125.014 9.72375 125.803 8.92575C126.602 8.12775 127.596 7.72875 128.785 7.72875C129.553 7.72875 130.252 7.9125 130.883 8.28C131.514 8.6475 131.993 9.141 132.319 9.7605L130.568 10.7842C130.41 10.4588 130.168 10.2015 129.842 10.0125C129.526 9.8235 129.169 9.729 128.769 9.729C128.159 9.729 127.654 9.93375 127.254 10.3433C126.855 10.7423 126.655 11.2568 126.655 11.8868C126.655 12.5063 126.855 13.0208 127.254 13.4303C127.654 13.8293 128.159 14.0288 128.769 14.0288C129.179 14.0288 129.542 13.9395 129.858 13.761C130.184 13.572 130.426 13.3148 130.583 12.9893L132.351 13.9973C132.003 14.6168 131.514 15.1155 130.883 15.4935C130.252 15.861 129.553 16.0448 128.785 16.0448Z" fill="white"/>
+    <path d="M135.024 12.7215C135.297 13.7085 136.039 14.202 137.248 14.202C138.027 14.202 138.616 13.9395 139.015 13.4145L140.656 14.3595C139.878 15.483 138.731 16.0448 137.217 16.0448C135.912 16.0448 134.866 15.651 134.077 14.8635C133.288 14.076 132.894 13.0838 132.894 11.8868C132.894 10.7003 133.283 9.71325 134.061 8.92575C134.839 8.12775 135.839 7.72875 137.059 7.72875C138.216 7.72875 139.168 8.12775 139.915 8.92575C140.672 9.72375 141.051 10.7108 141.051 11.8868C141.051 12.1493 141.024 12.4275 140.972 12.7215H135.024ZM134.992 11.1465H139.015C138.9 10.611 138.658 10.212 138.29 9.9495C137.932 9.687 137.522 9.55575 137.059 9.55575C136.512 9.55575 136.06 9.6975 135.702 9.981C135.344 10.254 135.108 10.6425 134.992 11.1465Z" fill="white"/>
+    <path d="M45.7157 19.4242C46.778 19.4242 47.6721 19.7812 48.3979 20.4953C49.1237 21.2093 49.4865 22.086 49.4865 23.1255C49.4865 24.165 49.1237 25.0417 48.3979 25.7557C47.6721 26.4697 46.778 26.8268 45.7157 26.8268H43.775V30.4492H41.5977V19.4242H45.7157ZM45.7157 24.795C46.1785 24.795 46.5624 24.6375 46.8674 24.3225C47.1725 23.997 47.325 23.598 47.325 23.1255C47.325 22.6425 47.1725 22.2435 46.8674 21.9285C46.5624 21.6135 46.1785 21.456 45.7157 21.456H43.775V24.795H45.7157Z" fill="rgba(255,255,255,.6)"/>
+    <path d="M56.2811 22.5742H58.3164V30.4492H56.2811V29.52C55.671 30.2865 54.8138 30.6697 53.7093 30.6697C52.6575 30.6697 51.7529 30.2708 50.9955 29.4727C50.2487 28.6642 49.8753 27.6772 49.8753 26.5117C49.8753 25.3463 50.2487 24.3645 50.9955 23.5665C51.7529 22.758 52.6575 22.3538 53.7093 22.3538C54.8138 22.3538 55.671 22.737 56.2811 23.5035V22.5742ZM52.526 28.1182C52.9362 28.5278 53.4569 28.7325 54.088 28.7325C54.7191 28.7325 55.2398 28.5278 55.65 28.1182C56.0707 27.6982 56.2811 27.1628 56.2811 26.5117C56.2811 25.8608 56.0707 25.3305 55.65 24.921C55.2398 24.501 54.7191 24.291 54.088 24.291C53.4569 24.291 52.9362 24.501 52.526 24.921C52.1158 25.3305 51.9107 25.8608 51.9107 26.5117C51.9107 27.1628 52.1158 27.6982 52.526 28.1182Z" fill="rgba(255,255,255,.6)"/>
+    <path d="M62.1974 23.9287C62.3867 23.4247 62.697 23.0467 63.1283 22.7947C63.5701 22.5427 64.0592 22.4167 64.5956 22.4167V24.6847C63.975 24.6112 63.4175 24.7372 62.9232 25.0627C62.4393 25.3883 62.1974 25.929 62.1974 26.685V30.4492H60.1621V22.5742H62.1974V23.9287Z" fill="rgba(255,255,255,.6)"/>
+    <path d="M70.5141 24.5273H68.7312V27.8033C68.7312 28.0763 68.7996 28.2758 68.9364 28.4018C69.0731 28.5278 69.2729 28.6012 69.5359 28.6222C69.7989 28.6327 70.1249 28.6275 70.5141 28.6065V30.4492C69.1152 30.6068 68.1264 30.4755 67.5479 30.0555C66.9799 29.6355 66.6959 28.8848 66.6959 27.8033V24.5273H65.3232V22.5742H66.6959V20.9835L68.7312 20.3693V22.5742H70.5141V24.5273Z" fill="rgba(255,255,255,.6)"/>
+    <path d="M76.4587 22.3538C77.3212 22.3538 78.0312 22.6425 78.5887 23.22C79.1567 23.7975 79.4407 24.5955 79.4407 25.614V30.4492H77.4053V25.866C77.4053 25.341 77.2633 24.942 76.9793 24.669C76.6953 24.3855 76.3167 24.2437 75.8433 24.2437C75.3174 24.2437 74.8967 24.4065 74.5811 24.732C74.2655 25.0575 74.1078 25.5457 74.1078 26.1967V30.4492H72.0724V22.5742H74.1078V23.4563C74.6021 22.7213 75.3858 22.3538 76.4587 22.3538Z" fill="rgba(255,255,255,.6)"/>
+    <path d="M82.8983 27.3465C83.1718 28.3335 83.9134 28.827 85.123 28.827C85.9014 28.827 86.4904 28.5645 86.8901 28.0395L88.531 28.9845C87.7526 30.108 86.6061 30.6697 85.0914 30.6697C83.7871 30.6697 82.7406 30.276 81.9517 29.4885C81.1628 28.701 80.7683 27.7087 80.7683 26.5117C80.7683 25.3253 81.1575 24.3383 81.9359 23.5508C82.7143 22.7528 83.7135 22.3538 84.9337 22.3538C86.0907 22.3538 87.0426 22.7528 87.7894 23.5508C88.5468 24.3487 88.9254 25.3358 88.9254 26.5117C88.9254 26.7743 88.8991 27.0525 88.8466 27.3465H82.8983ZM82.8668 25.7715H86.8901C86.7744 25.236 86.5325 24.837 86.1643 24.5745C85.8067 24.312 85.3965 24.1807 84.9337 24.1807C84.3867 24.1807 83.9344 24.3225 83.5768 24.606C83.2191 24.879 82.9825 25.2675 82.8668 25.7715Z" fill="rgba(255,255,255,.6)"/>
+    <path d="M92.3816 23.9287C92.571 23.4247 92.8813 23.0467 93.3125 22.7947C93.7543 22.5427 94.2434 22.4167 94.7799 22.4167V24.6847C94.1593 24.6112 93.6018 24.7372 93.1074 25.0627C92.6236 25.3883 92.3816 25.929 92.3816 26.685V30.4492H90.3463V22.5742H92.3816V23.9287Z" fill="rgba(255,255,255,.6)"/>
+    <path d="M97.6012 24.8107C97.6012 25.0207 97.738 25.194 98.0115 25.3305C98.2955 25.4565 98.6373 25.572 99.037 25.677C99.4367 25.7715 99.8364 25.8975 100.236 26.055C100.636 26.202 100.972 26.454 101.246 26.811C101.53 27.168 101.672 27.6143 101.672 28.1497C101.672 28.9583 101.367 29.583 100.757 30.024C100.157 30.4545 99.4052 30.6697 98.5006 30.6697C96.8807 30.6697 95.7763 30.045 95.1872 28.7955L96.9544 27.8033C97.1858 28.4858 97.7012 28.827 98.5006 28.827C99.2264 28.827 99.5892 28.6012 99.5892 28.1497C99.5892 27.9397 99.4472 27.7717 99.1632 27.6458C98.8898 27.5092 98.5532 27.3885 98.1535 27.2835C97.7538 27.1785 97.3541 27.0473 96.9544 26.8898C96.5547 26.7323 96.2128 26.4855 95.9288 26.1495C95.6553 25.803 95.5186 25.3725 95.5186 24.858C95.5186 24.081 95.8026 23.472 96.3706 23.031C96.9491 22.5795 97.6644 22.3538 98.5164 22.3538C99.158 22.3538 99.7418 22.5007 100.268 22.7947C100.794 23.0782 101.209 23.4878 101.514 24.0233L99.7786 24.9683C99.5261 24.4328 99.1054 24.165 98.5164 24.165C98.2534 24.165 98.0325 24.2228 97.8537 24.3383C97.6854 24.4538 97.6012 24.6112 97.6012 24.8107Z" fill="rgba(255,255,255,.6)"/>
+  </svg>
+  <div class="topbar-spacer"></div>
+  <span class="topbar-meta">{{ biz_days }} business days</span>
+  <span class="topbar-meta">Data Updated To: {{ last_refresh }}</span>
+  <a href="/logout" style="color:rgba(255,255,255,.6);font-size:12px;font-weight:500;text-decoration:none;padding:4px 10px;border:1px solid rgba(255,255,255,.25);border-radius:6px;margin-left:8px;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">Sign out</a>
+</header>
+
+<!-- TOOLBAR -->
+<form class="toolbar" method="GET" action="/" id="filter-form">
+  <input type="hidden" name="tab" id="tab-input" value="{{ active_tab }}">
+  <input type="hidden" name="start" id="start-input" value="{{ start }}">
+  <input type="hidden" name="end"   id="end-input"   value="{{ end }}">
+  <button type="button" class="btn btn-ghost period-btn" id="period-btn" onclick="toggleDatePicker()">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="2" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 5h11M4 1v2M9 1v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <span id="period-label">{{ start.split('-')[2] }}/{{ start.split('-')[1] }}/{{ start.split('-')[0][2:] }} – {{ end.split('-')[2] }}/{{ end.split('-')[1] }}/{{ end.split('-')[0][2:] }}</span>
+  </button>
+  <!-- Date-range popover -->
+  <div class="date-popover" id="date-popover">
+    <div class="date-popover-title">Select period</div>
+    <div class="date-popover-row">
+      <div class="date-popover-field">
+        <label>From</label>
+        <input type="date" id="pop-start" value="{{ start }}" min="{{ min_date }}" max="{{ lbd }}">
+      </div>
+      <div class="date-popover-field">
+        <label>To</label>
+        <input type="date" id="pop-end" value="{{ end }}" min="{{ min_date }}" max="{{ lbd }}">
+      </div>
+    </div>
+    <div id="date-popover-warn" class="date-popover-warn" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.75L12.25 11H1.75L7 1.75z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M7 5.5v2.5M7 9.5h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      No data available outside the valid range
+    </div>
+    <div class="date-popover-actions">
+      <button type="button" class="btn btn-ghost" onclick="closeDatePicker()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="pop-apply" onclick="applyDatePicker()">Apply</button>
+    </div>
+  </div>
+  <button type="button" class="btn btn-ghost" id="qf-pwd" onclick="setQF('pwd')">BD-1</button>
+  <button type="button" class="btn btn-ghost" id="qf-wtd" onclick="setQF('wtd')">WTD</button>
+  <button type="button" class="btn btn-ghost" id="qf-mtd" onclick="setQF('mtd')">MTD</button>
+  <div class="toolbar-sep"></div>
+  <select name="adviser" id="adviser-select">
+    <option value="team" {% if selected_adviser=='team' %}selected{% endif %}>All Advisers</option>
+    {% for r in perf_rows %}
+    <option value="{{ r.user_id }}" {% if selected_adviser==r.user_id|string %}selected{% endif %}>{{ r.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="button" class="btn btn-ghost" onclick="openTargets()">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg>
+    <span class="targets-text">Targets</span>
+  </button>
+</form>
+
+<div class="tabs">
+  <div class="tab" id="tab-perf"     onclick="showTab('perf',this)">Performance Tracker</div>
+  <div class="tab" id="tab-daily"    onclick="showTab('daily',this)">Daily Checks</div>
+  <div class="tab" id="tab-pipeline" onclick="showTab('pipeline',this)">Leads Tracker</div>
+</div>
+
+<div class="content">
+
+<!-- ══ DAILY CHECKS ══ -->
+<div id="daily" class="panel">
+  {% set dc = namespace(contacted=0,q=0,a=0,inf=0,at=0,af=0) %}
+  {% for r in daily_rows %}{% set dc.contacted=dc.contacted+r.contacted %}{% set dc.q=dc.q+r.quotes_count %}{% set dc.a=dc.a+r.apps_count %}{% set dc.inf=dc.inf+r.inforce_count %}{% set dc.at=dc.at+r.appt_today %}{% set dc.af=dc.af+r.appt_future %}{% endfor %}
+
+  <div class="table-outer"><div class="table-scroll"><table>
+    <thead><tr>
+      {% macro dth(label,tip) %}<th><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
+      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
+      {{ dth("Contacted","Calls with a duration of 5 seconds or more.") }}
+      {{ dth("Quotes #","Distinct leads quoted in the selected period.") }}
+      {{ dth("Apps #","Applications created in the selected period.") }}
+      {{ dth("Inforce #","Apps completed (inforce) in the selected period.") }}
+      {{ dth("Today's Appts","Appointments scheduled for today from the CRM calendar (leads_leadschedule tasks).") }}
+      {{ dth("Future Appts","All appointments scheduled from tomorrow onwards in the CRM calendar.") }}
+    </tr></thead>
+    <tbody>
+      {% for r in daily_rows %}
+      <tr class="adviser-row" data-uid="{{ r.user_id }}">
+        <td><div class="avatar-cell">
+          {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
+          {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
+          <span class="adviser-name">{{ r.name }}</span>
+        </div></td>
+        <td>{{ r.contacted }}</td>
+        <td>{{ r.quotes_count }}</td>
+        <td>{{ r.apps_count }}</td>
+        <td>{{ r.inforce_count }}</td>
+        <td>{{ r.appt_today }}</td>
+        <td>{{ r.appt_future }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot id="daily-total-row"><tr>
+      <td>Team Total</td>
+      <td>{{ daily_rows | sum(attribute='contacted') }}</td><td>{{ dc.q }}</td><td>{{ dc.a }}</td>
+      <td>{{ dc.inf }}</td><td>{{ dc.at }}</td><td>{{ dc.af }}</td>
+    </tr></tfoot>
+  </table></div></div>
+
+  <div class="chart-grid">
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Contacted</div></div><div class="chart-card-total" id="kpi-dc-called">—</div><div class="chart-card-sub">assigned leads contacted per day</div><div class="chart-wrap"><canvas id="chart-dc-called"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Quotes</div></div><div class="chart-card-total" id="kpi-dc-quotes">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-quotes"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Apps</div></div><div class="chart-card-total" id="kpi-dc-apps">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-apps"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce</div></div><div class="chart-card-total" id="kpi-dc-inforce">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-inforce"></canvas></div></div>
+  </div>
+</div><!-- /daily panel -->
+
+<!-- ══ LEADS TRACKER ══ -->
+<div id="pipeline" class="panel">
+  {% set pl = namespace(asgn=0,cont=0,nc=0,bkd=0,nb=0) %}
+  {% for r in pipeline_rows %}{% set pl.asgn=pl.asgn+r.assigned %}{% set pl.cont=pl.cont+r.contacted %}{% set pl.nc=pl.nc+r.no_contact %}{% set pl.bkd=pl.bkd+r.booked %}{% set pl.nb=pl.nb+r.not_booked %}{% endfor %}
+  <div class="table-outer"><div class="table-scroll"><table>
+    <thead><tr>
+      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
+      <th><div class="th-inner">Assigned<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Total leads assigned to this adviser in the period.</div></div></div></th>
+      <th><div class="th-inner">Contacted<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Calls with a duration of 5 seconds or more in the period.</div></div></div></th>
+      <th><div class="th-inner">No Contact<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Calls with a duration of less than 5 seconds — likely unanswered or hung up immediately.</div></div></div></th>
+      <th><div class="th-inner">Booked<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Of assigned leads: received the Life Insurance Questions document (anytime on that lead).</div></div></div></th>
+      <th><div class="th-inner">Not Booked<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Contacted leads that have not yet received the LIQ document.</div></div></div></th>
+      <th><div class="th-inner">A→C %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Contacted ÷ Assigned × 100. Lead contact rate.</div></div></div></th>
+      <th><div class="th-inner">C→B %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Booked ÷ Contacted × 100. Contact-to-book conversion.</div></div></div></th>
+      <th><div class="th-inner">A→B %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Booked ÷ Assigned × 100. Overall conversion rate.</div></div></div></th>
+    </tr></thead>
+    <tbody id="pipeline-tbody">
+      {% for r in pipeline_rows %}
+      <tr class="adviser-row" data-uid="{{ r.user_id }}">
+        <td><div class="avatar-cell">
+          {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
+          {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
+          <span class="adviser-name">{{ r.name }}</span>
+        </div></td>
+        <td>{{ r.assigned }}</td>
+        <td>{{ r.contacted }}</td>
+        <td>{{ r.no_contact }}</td>
+        <td>{{ r.booked }}</td>
+        <td>{{ r.not_booked }}</td>
+        <td class="conv-cell">{{ r.conv_ac }}%</td>
+        <td class="conv-cell">{{ r.conv_cb }}%</td>
+        <td class="conv-cell">{{ r.conv_ab }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot><tr>
+      <td>Team Total</td>
+      <td>{{ pl.asgn }}</td><td>{{ pl.cont }}</td><td>{{ pl.nc }}</td>
+      <td>{{ pl.bkd }}</td><td>{{ pl.nb }}</td>
+      <td class="conv-cell">{{ "{:.1f}".format(pl.cont/pl.asgn*100 if pl.asgn else 0) }}%</td>
+      <td class="conv-cell">{{ "{:.1f}".format(pl.bkd/pl.cont*100 if pl.cont else 0) }}%</td>
+      <td class="conv-cell">{{ "{:.1f}".format(pl.bkd/pl.asgn*100 if pl.asgn else 0) }}%</td>
+    </tr></tfoot>
+  </table></div></div>
+
+  <div class="chart-grid">
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Assigned</div></div><div class="chart-card-total" id="kpi-assigned">—</div><div class="chart-card-sub">leads assigned per day</div><div class="chart-wrap"><canvas id="chart-assigned"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Contacted</div></div><div class="chart-card-total" id="kpi-contacted">—</div><div class="chart-card-sub">calls ≥ 5 seconds per day</div><div class="chart-wrap"><canvas id="chart-contacted"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">No Contact</div></div><div class="chart-card-total" id="kpi-nocontact">—</div><div class="chart-card-sub">calls &lt; 5 seconds per day</div><div class="chart-wrap"><canvas id="chart-nocontact"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Booked</div></div><div class="chart-card-total" id="kpi-booked">—</div><div class="chart-card-sub">LIQ document sent</div><div class="chart-wrap"><canvas id="chart-booked"></canvas></div></div>
+  </div>
+</div><!-- /pipeline panel -->
+<div id="perf" class="panel">
+  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0) %}
+  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% endfor %}
+
+  <div class="legend">
+    <span class="legend-item"><span class="beacon beacon-on"></span>On target</span>
+    <span class="legend-item"><span class="beacon beacon-near"></span>Near target</span>
+    <span class="legend-item"><span class="beacon beacon-below"></span>Below target</span>
+  </div>
+
+  <div class="table-outer"><div class="table-scroll"><table>
+    <thead><tr>
+      {% macro th(label,tip,cg='') %}<th {% if cg %}data-cg="{{ cg }}"{% endif %}><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
+      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
+      <th><div class="th-inner">Days<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Business days where adviser made at least 1 call or sent at least 1 quote.</div></div></div></th>
+      {{ th("Talk Time","Total call duration via noojee_callrecord.","b") }}
+      {{ th("Talk / Day","Total talk time ÷ days worked. Threshold-highlighted.","b") }}
+      {{ th("Quotes #","Distinct leads quoted (last quote per lead).","c") }}
+      {{ th("Quote Total $","Sum of last quote value per lead in period.","c") }}
+      {{ th("Quote Avg $","Quote Total ÷ Quotes count.","c") }}
+      {{ th("Quotes / Day","Quotes ÷ days worked. Threshold-highlighted.","c") }}
+      {{ th("Apps #","Applications created in period.","d") }}
+      {{ th("Apps $","Sum of application premium in period.","d") }}
+      {{ th("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
+      {{ th("Q-App %","Apps ÷ Quotes × 100.","d") }}
+      {{ th("Inforce #","Apps completed in period.","d") }}
+      {{ th("Inforce $","Sum of premium for completed apps. Threshold-highlighted.","d") }}
+      {{ th("Inf / Day","Inforce count ÷ total business days.","d") }}
+      {{ th("Avg Inf/Day $","Inforce value ÷ total business days.","d") }}
+    </tr></thead>
+    <tbody id="perf-tbody">
+      {% for r in perf_rows %}
+      <tr class="adviser-row" data-uid="{{ r.user_id }}"
+          data-talk-mins="{{ (r.talk_per_day.split(':')[0]|int*60+r.talk_per_day.split(':')[1]|int) if ':' in r.talk_per_day else 0 }}"
+          data-qpd="{{ r.quotes_per_day }}"
+          data-apd="{{ r.apps_per_day }}"
+          data-inf="{{ r.inforce_value }}">
+        <td><div class="avatar-cell">
+          {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
+          {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
+          <span class="adviser-name">{{ r.name }}</span>
+        </div></td>
+        <td>{{ r.days_worked }}</td>
+        <td data-cg="b">{{ r.talk_time }}</td>
+        <td data-cg="b"><span class="badge badge-{{ r.talk_color }}" data-badge="talk">{{ r.talk_per_day }}</span></td>
+        <td data-cg="c">{{ r.quotes_count }}</td>
+        <td data-cg="c">${{ "{:,.0f}".format(r.quote_total) }}</td>
+        <td data-cg="c">${{ "{:,.0f}".format(r.quote_avg) }}</td>
+        <td data-cg="c"><span class="badge badge-{{ r.quotes_color }}" data-badge="qpd">{{ r.quotes_per_day }}</span></td>
+        <td data-cg="d">{{ r.apps_count }}</td>
+        <td data-cg="d">${{ "{:,.0f}".format(r.apps_value) }}</td>
+        <td data-cg="d"><span class="badge badge-{{ r.apps_color }}" data-badge="apd">{{ r.apps_per_day }}</span></td>
+        <td data-cg="d">{{ r.q2a_pct }}%</td>
+        <td data-cg="d">{{ r.inforce_count }}</td>
+        <td data-cg="d"><span class="badge badge-{{ r.inforce_color }}" data-badge="inf">${{ "{:,.0f}".format(r.inforce_value) }}</span></td>
+        <td data-cg="d">{{ r.inf_per_day }}</td>
+        <td data-cg="d">${{ "{:,.0f}".format(r.avg_inf_day) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot id="team-total-row"
+      data-talk-mins="{% if t.n %}{{ ((t.talk_s/t.n)//60)|int }}{% else %}0{% endif %}"
+      data-qpd="{{ '{:.1f}'.format(t.qpd/t.n if t.n else 0) }}"
+      data-apd="{{ '{:.1f}'.format(t.apd/t.n if t.n else 0) }}"
+      data-inf="{{ t.ival }}"><tr>
+      <td>Team Total</td><td>{{ (t.days // t.n) if t.n else 0 }}</td>
+      <td data-cg="b">{% if t.talk_total_s %}{{ "%d:%02d:%02d"|format((t.talk_total_s//3600)|int,((t.talk_total_s%3600)//60)|int,(t.talk_total_s%60)|int) }}{% else %}—{% endif %}</td>
+      <td data-cg="b">{% if t.n %}{% set avg_talk_s = t.talk_s / t.n %}{{ "%d:%02d"|format((avg_talk_s//3600)|int, ((avg_talk_s%3600)//60)|int) }}{% else %}—{% endif %}</td>
+      <td data-cg="c">{{ (t.q // t.n) if t.n else 0 }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval / t.n if t.n else 0) }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval/t.q if t.q else 0) }}</td><td data-cg="c">{{ "{:.1f}".format(t.qpd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ (t.apps // t.n) if t.n else 0 }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval / t.n if t.n else 0) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ "{:.1f}".format(t.apps/t.q*100 if t.q else 0) }}%</td>
+      <td data-cg="d">{{ (t.inf // t.n) if t.n else 0 }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td><td data-cg="d" colspan="2">—</td>
+    </tr></tfoot>
+  </table></div></div>
+
+  <div class="chart-grid">
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Talk / Day</div><span class="beacon" id="beacon-talk"></span></div><div class="chart-card-total" id="kpi-talk">—</div><div class="chart-card-sub" id="sub-talk">avg per day</div><div class="chart-wrap"><canvas id="chart-talk"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Quotes / Day</div><span class="beacon" id="beacon-qpd"></span></div><div class="chart-card-total" id="kpi-qpd">—</div><div class="chart-card-sub" id="sub-qpd">avg per day</div><div class="chart-wrap"><canvas id="chart-qpd"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Apps / Day</div><span class="beacon" id="beacon-apd"></span></div><div class="chart-card-total" id="kpi-apd">—</div><div class="chart-card-sub" id="sub-apd">avg per day</div><div class="chart-wrap"><canvas id="chart-apd"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-inf"></span></div><div class="chart-card-total" id="kpi-inf">—</div><div class="chart-card-sub" id="sub-inf">total inforce premium</div><div class="chart-wrap"><canvas id="chart-inf"></canvas></div></div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- ══ TARGETS MODAL ══ -->
+<div class="modal-overlay" id="targets-modal" onclick="closeTargetsOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Targets &amp; Thresholds</div>
+        <div class="modal-title-sub">Changes are saved and shared across all devices.</div>
+      </div>
+      <button class="modal-close" onclick="closeTargets()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <div class="modal-section-title">Targets</div>
+
+      <div class="tgt-line-row">
+        <div class="tgt-field"><label>Talk / Day</label><input type="number" id="t-talk-tgt" min="0" step="5" placeholder="150"><div class="tgt-hint">Default 150 (2h 30m)</div></div>
+        <div class="tgt-row-bottom">
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-talk-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
+          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="talk-line-color-preview"><input type="color" id="t-talk-line-color" oninput="previewTgtColor('talk-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="talk-tgt-color-preview"><input type="color" id="t-talk-tgt-color" oninput="previewTgtColor('talk-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="talk-avg-color-preview"><input type="color" id="t-talk-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
+        </div>
+      </div>
+      <div class="tgt-line-row">
+        <div class="tgt-field"><label>Quotes / Day</label><input type="number" id="t-q-tgt" min="0" step="1" placeholder="6"><div class="tgt-hint">Default 6</div></div>
+        <div class="tgt-row-bottom">
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-q-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-q" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
+          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="q-line-color-preview"><input type="color" id="t-q-line-color" oninput="previewTgtColor('q-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="q-tgt-color-preview"><input type="color" id="t-q-tgt-color" oninput="previewTgtColor('q-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="q-avg-color-preview"><input type="color" id="t-q-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
+        </div>
+      </div>
+      <div class="tgt-line-row">
+        <div class="tgt-field"><label>Apps / Day</label><input type="number" id="t-a-tgt" min="0" step="0.5" placeholder="2"><div class="tgt-hint">Default 2</div></div>
+        <div class="tgt-row-bottom">
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-a-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-a" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
+          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="a-line-color-preview"><input type="color" id="t-a-line-color" oninput="previewTgtColor('a-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="a-tgt-color-preview"><input type="color" id="t-a-tgt-color" oninput="previewTgtColor('a-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="a-avg-color-preview"><input type="color" id="t-a-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
+        </div>
+      </div>
+      <div class="tgt-line-row">
+        <div class="tgt-field"><label>Inforce $ / Month — Per Adviser</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px" id="inf-tgt-adviser-inputs">
+            <!-- Populated by JS from allAdvisers -->
+          </div>
+          <div class="tgt-hint" id="inf-tgt-hint">Team target = sum of individual targets × period months</div>
+        </div>
+        <div class="tgt-row-bottom">
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-inf-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
+          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-inf" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
+          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="inf-line-color-preview"><input type="color" id="t-inf-line-color" oninput="previewTgtColor('inf-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="inf-tgt-color-preview"><input type="color" id="t-inf-tgt-color" oninput="previewTgtColor('inf-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="inf-avg-color-preview"><input type="color" id="t-inf-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
+        </div>
+      </div>
+
+      <div class="modal-divider"></div>
+      <div class="modal-section-title">Thresholds</div>
+
+      <!-- ON TARGET -->
+      <div class="thr-block">
+        <div class="thr-header"><div class="thr-label"><span class="beacon beacon-on" style="animation:none"></span>On target</div></div>
+        <div class="thr-inputs-row">
+          <div class="thr-field-narrow"><label>Talk ≥ (mins)</label><input type="number" id="thr-talk-on" min="0" step="5"></div>
+          <div class="thr-field-narrow"><label>Quotes/Day ≥</label><input type="number" id="thr-q-on" min="0" step="1"></div>
+          <div class="thr-field-narrow"><label>Apps/Day ≥</label><input type="number" id="thr-a-on" min="0" step="0.5"></div>
+          <div class="thr-field-narrow"><label>Inforce $ ≥</label><input type="number" id="thr-inf-on" min="0" step="1000"></div>
+        </div>
+        <div class="thr-bottom-row">
+          <div class="thr-color-wrap"><div class="color-preview" id="on-color-preview"><input type="color" id="thr-on-color" oninput="previewColor('on',this.value)"></div><span id="on-color-hex" style="font-size:11px;color:var(--g500);font-family:monospace"></span></div>
+          <div class="thr-enabled-row"><label class="toggle"><input type="checkbox" id="thr-on-enabled"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Enabled</span></div>
+        </div>
+      </div>
+
+      <!-- NEAR TARGET -->
+      <div class="thr-block">
+        <div class="thr-header"><div class="thr-label"><span class="beacon beacon-near" style="animation:none"></span>Near target</div></div>
+        <div class="thr-inputs-row">
+          <div class="thr-field-narrow"><label>Talk ≥ (mins)</label><input type="number" id="thr-talk-near" min="0" step="5"></div>
+          <div class="thr-field-narrow"><label>Quotes/Day ≥</label><input type="number" id="thr-q-near" min="0" step="1"></div>
+          <div class="thr-field-narrow"><label>Apps/Day ≥</label><input type="number" id="thr-a-near" min="0" step="0.5"></div>
+          <div class="thr-field-narrow"><label>Inforce $ ≥</label><input type="number" id="thr-inf-near" min="0" step="1000"></div>
+        </div>
+        <div class="thr-bottom-row">
+          <div class="thr-color-wrap"><div class="color-preview" id="near-color-preview"><input type="color" id="thr-near-color" oninput="previewColor('near',this.value)"></div><span id="near-color-hex" style="font-size:11px;color:var(--g500);font-family:monospace"></span></div>
+          <div class="thr-enabled-row"><label class="toggle"><input type="checkbox" id="thr-near-enabled"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Enabled</span></div>
+        </div>
+      </div>
+
+      <!-- BELOW TARGET -->
+      <div class="thr-block">
+        <div class="thr-header"><div class="thr-label"><span class="beacon beacon-below" style="animation:none"></span>Below target</div></div>
+        <div class="thr-bottom-row">
+          <div class="thr-color-wrap"><div class="color-preview" id="below-color-preview"><input type="color" id="thr-below-color" oninput="previewColor('below',this.value)"></div><span id="below-color-hex" style="font-size:11px;color:var(--g500);font-family:monospace"></span></div>
+          <div class="thr-enabled-row"><label class="toggle"><input type="checkbox" id="thr-below-enabled"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Enabled</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="resetTargets()">Reset defaults</button>
+      <button class="btn btn-ghost" onclick="closeTargets()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTargets()">Save targets</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg class="toast-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L14 13H2L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3M8 10.5h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  <span id="toast-msg">No data available for the selected period</span>
+</div>
+
+</div><!-- /shell -->
+
+<script>
+// ── Flask data ──
+const dates           = {{ dates_list | tojson }};
+const MONTHS          = {{ months }};  // period length in months (biz_days/20)
+const TEAM_AVGS       = {{ team_avgs | tojson }};  // server-computed, matches tfoot exactly
+const allAdvisers     = {{ chart_advisers | tojson }};
+// Build per-adviser inforce target inputs inside modal
+(function(){
+  const wrap = document.getElementById('inf-tgt-adviser-inputs');
+  if(!wrap) return;
+  allAdvisers.forEach(a=>{
+    const firstName = a.name.split(' ')[0];
+    wrap.innerHTML += `<div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+      <span style="font-size:11px;color:#667085;font-weight:500">${firstName}</span>
+      <input type="number" id="t-inf-tgt-${a.uid}" min="0" step="1000" placeholder="20000"
+        style="width:80px;padding:4px 6px;border:1px solid #D0D5DD;border-radius:6px;font-size:12px;text-align:center">
+    </div>`;
+  });
+})();
+const allPipeAdvisers = {{ pipeline_chart_advisers | tojson }};
+const selectedAdviser = "{{ selected_adviser }}";
+const QF = {
+  pwd:{start:"{{ prev_wd }}",end:"{{ lbd }}"},
+  wtd:{start:"{{ wtd_start }}",end:"{{ lbd }}"},
+  mtd:{start:"{{ mtd_start }}",end:"{{ lbd }}"},
+};
+
+// ── Targets ──
+const DEFAULTS={
+  talkTgt:150,showTalkTgt:true,qTgt:6,showQTgt:true,aTgt:2,showATgt:true,
+  infTgts:{181:20000,182:20000,183:20000,152:20000},showInfTgt:true,
+  showAvgTalk:true,showAvgQ:true,showAvgA:true,showAvgInf:true,avgLineColor:'#7f56d9',
+  talkLineColor:'#7f56d9',qLineColor:'#7f56d9',aLineColor:'#7f56d9',infLineColor:'#7f56d9',
+  talkTgtColor:'#12B76A',qTgtColor:'#12B76A',aTgtColor:'#12B76A',infTgtColor:'#12B76A',
+  talkOn:150,talkNear:120,qOn:6,qNear:4,aOn:2,aNear:1,infOn:20000,infNear:15000,
+  onColor:'#12B76A',onEnabled:true,nearColor:'#EAB308',nearEnabled:true,belowColor:'#B42318',belowEnabled:true,
+};
+// ── Settings: load from server on page load, fall back to DEFAULTS ──────────
+let T = {...DEFAULTS};
+(function(){
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/settings', false);
+  try {
+    xhr.send();
+    if(xhr.status === 200){
+      const saved = JSON.parse(xhr.responseText);
+      if(saved && Object.keys(saved).length) T = {...DEFAULTS, ...saved};
+    }
+  } catch(e) {}
+})();
+
+function hex2rgb(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`${r},${g},${b}`;}
+function hex2rgba(hex,a){const[r,g,b]=hex2rgb(hex).split(',');return`rgba(${r},${g},${b},${a})`;}
+
+function applyCSS(){
+  const s=document.documentElement.style;
+  s.setProperty('--on-color',    T.onEnabled   ?T.onColor   :'#98A2B3');
+  s.setProperty('--on-bg',       T.onEnabled   ?hex2rgba(T.onColor,.1):'rgba(152,162,179,.08)');
+  s.setProperty('--on-glow',     T.onEnabled   ?hex2rgb(T.onColor):'152,162,179');
+  s.setProperty('--near-color',  T.nearEnabled ?T.nearColor :'#98A2B3');
+  s.setProperty('--near-bg',     T.nearEnabled ?hex2rgba(T.nearColor,.1):'rgba(152,162,179,.08)');
+  s.setProperty('--near-glow',   T.nearEnabled ?hex2rgb(T.nearColor):'152,162,179');
+  s.setProperty('--below-color', T.belowEnabled?T.belowColor:'#98A2B3');
+  s.setProperty('--below-bg',    T.belowEnabled?hex2rgba(T.belowColor,.08):'rgba(152,162,179,.06)');
+  s.setProperty('--below-glow',  T.belowEnabled?hex2rgb(T.belowColor):'152,162,179');
+}
+applyCSS();
+
+// ── Tab ──
+function showTab(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('tab-input').value=id;
+}
+(function(){
+  const raw="{{ active_tab }}";
+  const id=(raw==='perf'||raw==='daily'||raw==='pipeline')?raw:'perf';
+  const te=document.getElementById('tab-'+id),pe=document.getElementById(id);
+  if(te&&pe){te.classList.add('active');pe.classList.add('active');}
+  else{document.getElementById('tab-perf').classList.add('active');document.getElementById('perf').classList.add('active');}
+})();
+
+// ── Loading ──
+function showLoading(){document.getElementById('loading-overlay').classList.add('active');}
+
+// ── Auto-submit ──
+function submitForm(){showLoading();document.getElementById('filter-form').submit();}
+// ── Date popover ──
+const LBD_STR = "{{ lbd }}";          // last business day (max allowed)
+const MIN_STR = "{{ min_date }}";     // earliest allowed date
+
+function toggleDatePicker(){
+  const p=document.getElementById('date-popover');
+  const btn=document.getElementById('period-btn');
+  if(p.classList.contains('open')){closeDatePicker();}
+  else{syncPopoverToHidden();p.classList.add('open');btn.classList.add('popover-open');}
+}
+function closeDatePicker(){
+  document.getElementById('date-popover').classList.remove('open');
+  document.getElementById('period-btn').classList.remove('popover-open');
+}
+function syncPopoverToHidden(){
+  document.getElementById('pop-start').value=document.getElementById('start-input').value;
+  document.getElementById('pop-end').value=document.getElementById('end-input').value;
+  document.getElementById('date-popover-warn').style.display='none';
+}
+
+function validatePopDates(){
+  const s=document.getElementById('pop-start').value,e=document.getElementById('pop-end').value;
+  const warn=document.getElementById('date-popover-warn');
+  if(!s||!e){warn.style.display='none';return false;}
+  const outside=(s<MIN_STR||s>LBD_STR||e<MIN_STR||e>LBD_STR);
+  if(outside){warn.style.display='flex';return false;}
+  if(s>e){warn.textContent='Start date must be before end date';warn.style.display='flex';return false;}
+  warn.style.display='none';return true;
+}
+['pop-start','pop-end'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>{
+    validatePopDates();
+  });
+});
+
+function fmtDateLabel(iso){const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
+function updatePeriodLabel(){
+  const s=document.getElementById('start-input').value,e=document.getElementById('end-input').value;
+  document.getElementById('period-label').textContent=fmtDateLabel(s)+' – '+fmtDateLabel(e);
+}
+function applyDatePicker(){
+  if(!validatePopDates()){showToast('No data available for the selected period');return;}
+  document.getElementById('start-input').value=document.getElementById('pop-start').value;
+  document.getElementById('end-input').value=document.getElementById('pop-end').value;
+  closeDatePicker();
+  ['pwd','wtd','mtd'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
+  submitForm();
+}
+
+// Close popover on outside click
+document.addEventListener('click',e=>{
+  const pop=document.getElementById('date-popover');
+  const btn=document.getElementById('period-btn');
+  if(pop.classList.contains('open')&&!pop.contains(e.target)&&!btn.contains(e.target))closeDatePicker();
+});
+
+// ── Toast ──
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg||'No data available for the selected period';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),4000);
+}
+
+document.getElementById('adviser-select').addEventListener('change',submitForm);
+function setQF(key){
+  const f=QF[key];
+  document.getElementById('start-input').value=f.start;
+  document.getElementById('end-input').value=f.end;
+  updatePeriodLabel();
+  ['pwd','wtd','mtd'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
+  document.getElementById('qf-'+key).classList.add('active-filter');
+  submitForm();
+}
+(function(){
+  const s=document.getElementById('start-input').value,e=document.getElementById('end-input').value;
+  ['pwd','wtd','mtd'].forEach(k=>{if(QF[k].start===s&&QF[k].end===e)document.getElementById('qf-'+k).classList.add('active-filter');});
+})();
+
+// ── Row filter ──
+(function(){
+  document.querySelectorAll('.adviser-row').forEach(r=>{
+    r.style.display=(selectedAdviser==='team'||r.dataset.uid===selectedAdviser)?'':'none';
+  });
+  ['team-total-row','daily-total-row'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display=selectedAdviser==='team'?'':'none';
+  });
+})();
+
+// ── Tooltip ──
+function posTip(icon){
+  const tip=icon.parentElement.querySelector('.tip');
+  const r=icon.getBoundingClientRect();
+  tip.style.left=(r.left+r.width/2-110)+'px';tip.style.top=(r.top-8)+'px';
+  tip.style.transform='translateY(-100%)';tip.style.display='block';
+  icon.addEventListener('mouseleave',()=>tip.style.display='none',{once:true});
+}
+
+// ── Badge refresh ──
+function badgeClass(metric,value){
+  const onV ={talk:T.talkOn,qpd:T.qOn,apd:T.aOn,inf:T.infOn*MONTHS}[metric];
+  const nearV={talk:T.talkNear,qpd:T.qNear,apd:T.aNear,inf:T.infNear*MONTHS}[metric];
+  if(T.onEnabled   &&value>=onV)  return 'badge badge-on';
+  if(T.nearEnabled &&value>=nearV)return 'badge badge-near';
+  if(T.belowEnabled)              return 'badge badge-below';
+  return 'badge badge-neutral';
+}
+function refreshBadges(){
+  document.querySelectorAll('#perf-tbody tr').forEach(row=>{
+    if(row.style.display==='none')return;
+    const tm=parseFloat(row.dataset.talkMins||0),qpd=parseFloat(row.dataset.qpd||0),
+          apd=parseFloat(row.dataset.apd||0),inf=parseFloat(row.dataset.inf||0);
+    row.querySelectorAll('[data-badge]').forEach(b=>{
+      const m=b.dataset.badge,val={talk:tm,qpd:qpd,apd:apd,inf:inf}[m]??0;
+      b.className=badgeClass(m,val);
+    });
+  });
+}
+
+// ── Beacon ──
+function setBeacon(id,value,onV,nearV){
+  const el=document.getElementById(id);if(!el)return;
+  if(T.onEnabled&&value>=onV)        el.className='beacon beacon-on';
+  else if(T.nearEnabled&&value>=nearV)el.className='beacon beacon-near';
+  else if(T.belowEnabled)            el.className='beacon beacon-below';
+  else                               el.className='beacon';
+}
+
+// ── Charts ──
+Chart.defaults.font.family="'Inter',sans-serif";Chart.defaults.font.size=11;
+const ORANGE='#D34108';
+const SLATE='#4d6175';
+const labels=dates.map(d=>{const p=d.split('-');return p[2]+'/'+p[1];});
+const ttBase={backgroundColor:'#101828',titleColor:'#fff',bodyColor:'rgba(255,255,255,.85)',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:6,displayColors:false};
+const chartInst={};
+
+function hexToRgb(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`${r},${g},${b}`;}
+function makeGradient(ctx,hex){
+  const g=ctx.createLinearGradient(0,0,0,210);
+  const rgb=hexToRgb(hex||'#4d6175');
+  g.addColorStop(0,`rgba(${rgb},0.18)`);
+  g.addColorStop(0.6,`rgba(${rgb},0.06)`);
+  g.addColorStop(1,`rgba(${rgb},0)`);
+  return g;
+}
+
+function buildLine(cid,data,name,yFmt,tgtVal,showTgt,lineColor,tgtColor,avgVal,avgColor,showAvg){
+  const ctx=document.getElementById(cid);if(!ctx)return;
+  if(chartInst[cid])chartInst[cid].destroy();
+  const lc=lineColor||SLATE;
+  const tc=tgtColor||'#D34108';
+  const ac=avgColor||'#1570EF';
+  const gradient=makeGradient(ctx.getContext('2d'),lc);
+  const ds=[{label:name,data,borderColor:lc,backgroundColor:gradient,borderWidth:2,
+    pointRadius:3,pointHoverRadius:5,pointBackgroundColor:lc,pointBorderColor:lc,pointBorderWidth:0,
+    tension:0.4,fill:true}];
+  if(showTgt&&tgtVal!=null)
+    ds.push({label:'Target',data:dates.map(()=>tgtVal),borderColor:tc,borderWidth:1.5,
+      pointRadius:0,pointHoverRadius:0,tension:0,fill:false});
+  if(showAvg&&avgVal!=null&&avgVal>0)
+    ds.push({label:'Avg',data:dates.map(()=>avgVal),borderColor:ac,borderWidth:1.5,
+      borderDash:[3,3],pointRadius:0,pointHoverRadius:0,tension:0,fill:false});
+  chartInst[cid]=new Chart(ctx,{type:'line',data:{labels,datasets:ds},options:{
+    responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...ttBase,callbacks:{label:item=>{
+      const lbl=item.dataset.label;
+      if(lbl==='Target') return ' Target: '+yFmt(item.parsed.y);
+      if(lbl==='Avg')    return ' Avg: '+yFmt(item.parsed.y);
+      return ' '+name+': '+yFmt(item.parsed.y);
+    }}}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:'#98A2B3',maxTicksLimit:8,maxRotation:0},border:{display:false}},
+      y:{grid:{color:'#F2F4F7'},ticks:{color:'#98A2B3',callback:v=>yFmt(v)},border:{display:false},beginAtZero:true}
+    }
+  }});
+}
+
+function getPerfS(){
+  if(selectedAdviser==='team'){
+    const n=allAdvisers.length||1;
+    return{name:'Team Avg',
+      talk_mins:  dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.talk_mins[i]||0),0)/n),
+      quotes_cnt: dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.quotes_cnt[i]||0),0)/n),
+      apps_cnt:   dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.apps_cnt[i]||0),0)/n),
+      inforce_val:dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.inforce_val[i]||0),0)), // inforce stays as team total
+      calls_cnt:  dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.calls_cnt[i]||0),0)/n),
+    };
+  }
+  const uid=parseInt(selectedAdviser);
+  return allAdvisers.find(a=>a.uid===uid)||{name:'—',talk_mins:[],quotes_cnt:[],apps_cnt:[],inforce_val:[],calls_cnt:[]};
+}
+function getPipeS(){
+  if(selectedAdviser==='team'){
+    const ks=['assigned','contacted','no_contact','booked'],agg={};
+    ks.forEach(k=>agg[k]=dates.map((_,i)=>allPipeAdvisers.reduce((s,a)=>s+(a[k][i]||0),0)));
+    return{name:'Team',...agg};
+  }
+  const uid=parseInt(selectedAdviser);
+  return allPipeAdvisers.find(a=>a.uid===uid)||{name:'—',assigned:[],contacted:[],no_contact:[],booked:[]};
+}
+
+function fmtMins(m){const h=Math.floor(m/60),mn=Math.round(m%60);return h+':'+String(mn).padStart(2,'0');}
+function fmtMoney(v){if(v>=1e6)return'$'+(v/1e6).toFixed(1)+'M';if(v>=1000)return'$'+(v/1000).toFixed(1)+'k';return'$'+v.toFixed(0);}
+function avg(arr){const nz=arr.filter(v=>v>0);return nz.length?nz.reduce((s,v)=>s+v,0)/nz.length:0;}
+function total(arr){return arr.reduce((s,v)=>s+v,0);}
+
+function rebuildCharts(){
+  applyCSS();
+  const ps=getPerfS(),pip=getPipeS();
+
+  // Daily checks charts — use same line colour as performance tab
+  const dcLC=T.talkLineColor;
+  buildLine('chart-dc-called',ps.calls_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
+  document.getElementById('kpi-dc-called').textContent=total(ps.calls_cnt);
+  buildLine('chart-dc-quotes',ps.quotes_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
+  document.getElementById('kpi-dc-quotes').textContent=total(ps.quotes_cnt);
+  buildLine('chart-dc-apps',ps.apps_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
+  document.getElementById('kpi-dc-apps').textContent=total(ps.apps_cnt);
+  buildLine('chart-dc-inforce',ps.inforce_val,ps.name,fmtMoney,null,false,dcLC);
+  document.getElementById('kpi-dc-inforce').textContent=fmtMoney(total(ps.inforce_val));
+  // Appts — scalar counts from server (not time-series)
+  const dcAt={{ daily_rows | sum(attribute='appt_today') }};
+  const dcAtm={{ daily_rows | sum(attribute='appt_future') }};
+
+  // Performance charts
+  // KPI values read directly from the table — team uses tfoot, individual uses their row.
+  // This guarantees charts match the table exactly, no separate math.
+  function getTableRow(){
+    if(selectedAdviser==='team') return document.getElementById('team-total-row');
+    return document.querySelector(`#perf-tbody tr[data-uid="${selectedAdviser}"]`);
+  }
+  const trow = getTableRow();
+  const tTalkMins = trow ? parseFloat(trow.dataset.talkMins||0) : 0;
+  const tQpd      = trow ? parseFloat(trow.dataset.qpd||0)       : 0;
+  const tApd      = trow ? parseFloat(trow.dataset.apd||0)       : 0;
+  const tInf      = trow ? parseFloat(trow.dataset.inf||0)       : 0;
+
+  buildLine('chart-talk',ps.talk_mins,ps.name,fmtMins,T.talkTgt,T.showTalkTgt,T.talkLineColor,T.talkTgtColor,tTalkMins,T.avgLineColor,T.showAvgTalk);
+  document.getElementById('kpi-talk').textContent=fmtMins(tTalkMins);
+  document.getElementById('sub-talk').textContent=`avg per day · target ${fmtMins(T.talkTgt)}`;
+  setBeacon('beacon-talk',tTalkMins,T.talkOn,T.talkNear);
+
+  buildLine('chart-qpd',ps.quotes_cnt,ps.name,v=>v.toFixed(0),T.qTgt,T.showQTgt,T.qLineColor,T.qTgtColor,tQpd,T.avgLineColor,T.showAvgQ);
+  document.getElementById('kpi-qpd').textContent=tQpd.toFixed(1);
+  document.getElementById('sub-qpd').textContent=`avg per day · target ${T.qTgt}`;
+  setBeacon('beacon-qpd',tQpd,T.qOn,T.qNear);
+
+  buildLine('chart-apd',ps.apps_cnt,ps.name,v=>v.toFixed(0),T.aTgt,T.showATgt,T.aLineColor,T.aTgtColor,tApd,T.avgLineColor,T.showAvgA);
+  document.getElementById('kpi-apd').textContent=tApd.toFixed(1);
+  document.getElementById('sub-apd').textContent=`avg per day · target ${T.aTgt}`;
+  setBeacon('beacon-apd',tApd,T.aOn,T.aNear);
+
+  // Inforce $ chart — daily values
+  // Per-adviser inforce target — team sums all, individual uses their own
+  let infScaledTgt;
+  if(selectedAdviser==='team'){
+    infScaledTgt = allAdvisers.reduce((s,a)=>(s+(T.infTgts[a.uid]||20000)),0);
+  } else {
+    infScaledTgt = (T.infTgts[parseInt(selectedAdviser)]||20000);
+  }
+  const totInf = tInf;
+  buildLine('chart-inf',ps.inforce_val,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor,totInf,T.avgLineColor,T.showAvgInf);
+  document.getElementById('kpi-inf').textContent=fmtMoney(totInf);
+  document.getElementById('sub-inf').textContent=`per day · target ${fmtMoney(infScaledTgt)} total`;
+  setBeacon('beacon-inf',totInf,infScaledTgt,infScaledTgt*0.75);
+
+  // Leads funnel charts — use same line colour as performance tab
+  const pLine=(cid,kid,arr)=>{buildLine(cid,arr,pip.name,v=>v.toFixed(0),null,false,T.talkLineColor);document.getElementById(kid).textContent=total(arr);};
+  pLine('chart-assigned','kpi-assigned',pip.assigned);
+  pLine('chart-contacted','kpi-contacted',pip.contacted);
+  pLine('chart-nocontact','kpi-nocontact',pip.no_contact);
+  pLine('chart-booked','kpi-booked',pip.booked);
+
+  refreshBadges();
+}
+// Hide loading overlay — always remove on load regardless of errors
+window.addEventListener('load', () => document.getElementById('loading-overlay').classList.remove('active'));
+try { rebuildCharts(); } catch(e) {
+  console.error('Chart build error:', e);
+  document.getElementById('loading-overlay').classList.remove('active');
+}
+function openTargets(){
+  document.getElementById('t-talk-tgt').value=T.talkTgt;
+  document.getElementById('t-talk-tgt-show').checked=T.showTalkTgt;
+  document.getElementById('t-q-tgt').value=T.qTgt;
+  document.getElementById('t-q-tgt-show').checked=T.showQTgt;
+  document.getElementById('t-a-tgt').value=T.aTgt;
+  document.getElementById('t-a-tgt-show').checked=T.showATgt;
+  allAdvisers.forEach(a=>{ const el=document.getElementById('t-inf-tgt-'+a.uid); if(el) el.value=T.infTgts[a.uid]||20000; });
+  document.getElementById('t-inf-tgt-show').checked=T.showInfTgt;
+  document.getElementById('t-show-avg').checked=T.showAvgTalk;
+  document.getElementById('t-show-avg-q').checked=T.showAvgQ;
+  document.getElementById('t-show-avg-a').checked=T.showAvgA;
+  document.getElementById('t-show-avg-inf').checked=T.showAvgInf;
+  document.getElementById('inf-tgt-hint').textContent=`Team target = sum of individual targets`;
+  // Per-chart colours
+  ['talk','q','a','inf'].forEach(k=>{
+    document.getElementById(`t-${k}-line-color`).value=T[`${k}LineColor`];
+    document.getElementById(`t-${k}-tgt-color`).value=T[`${k}TgtColor`];
+    document.getElementById(`t-${k}-avg-color`).value=T.avgLineColor;
+    previewTgtColor(`${k}-line`,T[`${k}LineColor`]);
+    previewTgtColor(`${k}-tgt`,T[`${k}TgtColor`]);
+    previewTgtColor(`${k}-avg`,T.avgLineColor);
+  });
+  document.getElementById('thr-on-color').value=T.onColor;
+  document.getElementById('thr-on-enabled').checked=T.onEnabled;
+  document.getElementById('thr-near-color').value=T.nearColor;
+  document.getElementById('thr-near-enabled').checked=T.nearEnabled;
+  document.getElementById('thr-below-color').value=T.belowColor;
+  document.getElementById('thr-below-enabled').checked=T.belowEnabled;
+  document.getElementById('thr-talk-on').value=T.talkOn;
+  document.getElementById('thr-talk-near').value=T.talkNear;
+  document.getElementById('thr-q-on').value=T.qOn;
+  document.getElementById('thr-q-near').value=T.qNear;
+  document.getElementById('thr-a-on').value=T.aOn;
+  document.getElementById('thr-a-near').value=T.aNear;
+  document.getElementById('thr-inf-on').value=T.infOn;
+  document.getElementById('thr-inf-near').value=T.infNear;
+  ['on','near','below'].forEach(k=>previewColor(k,T[k+'Color']));
+  document.getElementById('targets-modal').classList.add('open');
+}
+function closeTargets(){document.getElementById('targets-modal').classList.remove('open');}
+function closeTargetsOutside(e){if(e.target===document.getElementById('targets-modal'))closeTargets();}
+function resetTargets(){
+  T={...DEFAULTS};
+  fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+  closeTargets();rebuildCharts();
+}
+function previewColor(key,hex){
+  const prev=document.getElementById(key+'-color-preview');
+  const hexEl=document.getElementById(key+'-color-hex');
+  if(prev)prev.style.background=hex;if(hexEl)hexEl.textContent=hex.toUpperCase();
+}
+function previewTgtColor(key,hex){
+  const prev=document.getElementById(key+'-color-preview');
+  if(prev)prev.style.background=hex;
+}
+function g(id){return document.getElementById(id);}
+function fv(id,def){return parseFloat(g(id).value)||def;}
+function bv(id){return g(id).checked;}
+
+function saveTargets(){
+  T={
+    talkTgt:fv('t-talk-tgt',150),showTalkTgt:bv('t-talk-tgt-show'),
+    qTgt:fv('t-q-tgt',6),showQTgt:bv('t-q-tgt-show'),
+    aTgt:fv('t-a-tgt',2),showATgt:bv('t-a-tgt-show'),
+    infTgts:Object.fromEntries(allAdvisers.map(a=>[a.uid,parseFloat(document.getElementById('t-inf-tgt-'+a.uid)?.value)||20000])),
+    showInfTgt:bv('t-inf-tgt-show'),
+    showAvgTalk:bv('t-show-avg'),showAvgQ:bv('t-show-avg-q'),showAvgA:bv('t-show-avg-a'),showAvgInf:bv('t-show-avg-inf'),
+    avgLineColor:g('t-talk-avg-color').value,
+    talkLineColor:g('t-talk-line-color').value,talkTgtColor:g('t-talk-tgt-color').value,
+    qLineColor:g('t-q-line-color').value,qTgtColor:g('t-q-tgt-color').value,
+    aLineColor:g('t-a-line-color').value,aTgtColor:g('t-a-tgt-color').value,
+    infLineColor:g('t-inf-line-color').value,infTgtColor:g('t-inf-tgt-color').value,
+    onColor:g('thr-on-color').value,onEnabled:bv('thr-on-enabled'),
+    nearColor:g('thr-near-color').value,nearEnabled:bv('thr-near-enabled'),
+    belowColor:g('thr-below-color').value,belowEnabled:bv('thr-below-enabled'),
+    talkOn:fv('thr-talk-on',150),talkNear:fv('thr-talk-near',120),
+    qOn:fv('thr-q-on',6),qNear:fv('thr-q-near',4),
+    aOn:fv('thr-a-on',2),aNear:fv('thr-a-near',1),
+    infOn:fv('thr-inf-on',20000),infNear:fv('thr-inf-near',15000),
+  };
+  // Save to server so settings persist across devices and sessions
+  fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(T)});
+  closeTargets();rebuildCharts();
+}
+// ── Auto-reload when DB data refreshes ──────────────────────────────────────
+(function(){
+  if(!window.EventSource) return;
+  let knownVersion = null;
+  function connect(){
+    const es = new EventSource('/data-version');
+    es.onmessage = e => {
+      const v = e.data;
+      if(knownVersion === null){ knownVersion = v; return; }
+      if(v !== knownVersion){ location.reload(); }
+    };
+    es.onerror = () => { es.close(); setTimeout(connect, 15000); };
+  }
+  connect();
+})();
+</script>
+</body>
+</html>
