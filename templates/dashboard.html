@@ -56,6 +56,7 @@ input[type=date]::-webkit-datetime-edit-month-field:focus,
 input[type=date]::-webkit-datetime-edit-year-field:focus{background:#D34108;color:#fff;border-radius:2px}
 .toolbar select{padding-right:26px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2398A2B3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
 .toolbar input[type=date]:focus,.toolbar select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.qf-group{display:flex;align-items:center;gap:4px}
 /* Period button */
 .period-btn{gap:6px;font-variant-numeric:tabular-nums;min-width:200px;justify-content:flex-start}
 /* Date-range popover */
@@ -246,7 +247,14 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   .toolbar-sep{display:none}
   .toolbar-label{display:none}
   .targets-text{display:none}
-  /* Adviser select full width */
+  /* Row 1: date picker + targets side-by-side */
+  .period-btn{order:1}
+  .date-popover{order:1}
+  .targets-btn{order:2}
+  /* Row 2: quick-filter buttons on their own line */
+  .qf-group{order:3;flex-basis:100%;display:flex;gap:4px;justify-content:space-between}
+  .qf-group .btn{flex:1;min-width:0;padding:6px 2px;font-size:12px;justify-content:center;text-align:center}
+  /* Row 3: adviser dropdown full width */
   #adviser-select{width:100%;flex-basis:100%;order:10;height:38px;font-size:14px}
   /* Tabs */
   .tabs{padding:0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -350,11 +358,11 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
     <div class="date-popover-row">
       <div class="date-popover-field">
         <label>From</label>
-        <input type="date" id="pop-start" value="{{ start }}" min="{{ min_date }}" max="{{ lbd }}">
+        <input type="date" id="pop-start" value="{{ start }}" min="{{ min_date }}" max="{{ today_iso }}">
       </div>
       <div class="date-popover-field">
         <label>To</label>
-        <input type="date" id="pop-end" value="{{ end }}" min="{{ min_date }}" max="{{ lbd }}">
+        <input type="date" id="pop-end" value="{{ end }}" min="{{ min_date }}" max="{{ today_iso }}">
       </div>
     </div>
     <div id="date-popover-warn" class="date-popover-warn" style="display:none">
@@ -366,9 +374,18 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       <button type="button" class="btn btn-primary" id="pop-apply" onclick="applyDatePicker()">Apply</button>
     </div>
   </div>
-  <button type="button" class="btn btn-ghost" id="qf-pwd" onclick="setQF('pwd')">BD-1</button>
-  <button type="button" class="btn btn-ghost" id="qf-wtd" onclick="setQF('wtd')">WTD</button>
-  <button type="button" class="btn btn-ghost" id="qf-mtd" onclick="setQF('mtd')">MTD</button>
+  <button type="button" class="btn btn-ghost targets-btn" onclick="openTargets()">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg>
+    <span class="targets-text">Targets</span>
+  </button>
+  <div class="qf-group">
+    <button type="button" class="btn btn-ghost" id="qf-d0" onclick="setQF('d0')">D0</button>
+    <button type="button" class="btn btn-ghost" id="qf-d1" onclick="setQF('d1')">D1</button>
+    <button type="button" class="btn btn-ghost" id="qf-w0" onclick="setQF('w0')">W0</button>
+    <button type="button" class="btn btn-ghost" id="qf-w1" onclick="setQF('w1')">W1</button>
+    <button type="button" class="btn btn-ghost" id="qf-m0" onclick="setQF('m0')">M0</button>
+    <button type="button" class="btn btn-ghost" id="qf-m1" onclick="setQF('m1')">M1</button>
+  </div>
   <div class="toolbar-sep"></div>
   <select name="adviser" id="adviser-select">
     <option value="team" {% if selected_adviser=='team' %}selected{% endif %}>All Advisers</option>
@@ -376,10 +393,6 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
     <option value="{{ r.user_id }}" {% if selected_adviser==r.user_id|string %}selected{% endif %}>{{ r.name }}</option>
     {% endfor %}
   </select>
-  <button type="button" class="btn btn-ghost" onclick="openTargets()">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg>
-    <span class="targets-text">Targets</span>
-  </button>
 </form>
 
 <div class="tabs">
@@ -491,8 +504,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 </div><!-- /pipeline panel -->
 <div id="perf" class="panel">
-  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0) %}
-  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% endfor %}
+  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0,ipd=0,aipd=0) %}
+  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% set t.ipd=t.ipd+r.inf_per_day %}{% set t.aipd=t.aipd+r.avg_inf_day %}{% endfor %}
 
   <div class="legend">
     <span class="legend-item"><span class="beacon beacon-on"></span>On target</span>
@@ -555,13 +568,13 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       data-qpd="{{ '{:.1f}'.format(t.qpd/t.n if t.n else 0) }}"
       data-apd="{{ '{:.1f}'.format(t.apd/t.n if t.n else 0) }}"
       data-inf="{{ t.ival }}"><tr>
-      <td>Team Total</td><td>{{ (t.days // t.n) if t.n else 0 }}</td>
+      <td>Team Total</td><td>{{ t.days }}</td>
       <td data-cg="b">{% if t.talk_total_s %}{{ "%d:%02d:%02d"|format((t.talk_total_s//3600)|int,((t.talk_total_s%3600)//60)|int,(t.talk_total_s%60)|int) }}{% else %}—{% endif %}</td>
       <td data-cg="b">{% if t.n %}{% set avg_talk_s = t.talk_s / t.n %}{{ "%d:%02d"|format((avg_talk_s//3600)|int, ((avg_talk_s%3600)//60)|int) }}{% else %}—{% endif %}</td>
-      <td data-cg="c">{{ (t.q // t.n) if t.n else 0 }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval / t.n if t.n else 0) }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval/t.q if t.q else 0) }}</td><td data-cg="c">{{ "{:.1f}".format(t.qpd / t.n if t.n else 0) }}</td>
-      <td data-cg="d">{{ (t.apps // t.n) if t.n else 0 }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval / t.n if t.n else 0) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
+      <td data-cg="c">{{ t.q }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval) }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval/t.q if t.q else 0) }}</td><td data-cg="c">{{ "{:.1f}".format(t.qpd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ t.apps }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
       <td data-cg="d">{{ "{:.1f}".format(t.apps/t.q*100 if t.q else 0) }}%</td>
-      <td data-cg="d">{{ (t.inf // t.n) if t.n else 0 }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td><td data-cg="d" colspan="2">—</td>
+      <td data-cg="d">{{ t.inf }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td><td data-cg="d">{{ "{:.1f}".format(t.ipd / t.n if t.n else 0) }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aipd / t.n if t.n else 0) }}</td>
     </tr></tfoot>
   </table></div></div>
 
@@ -710,9 +723,12 @@ const allAdvisers     = {{ chart_advisers | tojson }};
 const allPipeAdvisers = {{ pipeline_chart_advisers | tojson }};
 const selectedAdviser = "{{ selected_adviser }}";
 const QF = {
-  pwd:{start:"{{ prev_wd }}",end:"{{ lbd }}"},
-  wtd:{start:"{{ wtd_start }}",end:"{{ lbd }}"},
-  mtd:{start:"{{ mtd_start }}",end:"{{ lbd }}"},
+  d0:{start:"{{ d0_start }}",end:"{{ d0_end }}"},
+  d1:{start:"{{ d1_start }}",end:"{{ d1_end }}"},
+  w0:{start:"{{ w0_start }}",end:"{{ w0_end }}"},
+  w1:{start:"{{ w1_start }}",end:"{{ w1_end }}"},
+  m0:{start:"{{ m0_start }}",end:"{{ m0_end }}"},
+  m1:{start:"{{ m1_start }}",end:"{{ m1_end }}"},
 };
 
 // ── Targets ──
@@ -778,7 +794,7 @@ function showLoading(){document.getElementById('loading-overlay').classList.add(
 // ── Auto-submit ──
 function submitForm(){showLoading();document.getElementById('filter-form').submit();}
 // ── Date popover ──
-const LBD_STR = "{{ lbd }}";          // last business day (max allowed)
+const TODAY_STR = "{{ today_iso }}";   // today (max allowed date)
 const MIN_STR = "{{ min_date }}";     // earliest allowed date
 
 function toggleDatePicker(){
@@ -801,7 +817,7 @@ function validatePopDates(){
   const s=document.getElementById('pop-start').value,e=document.getElementById('pop-end').value;
   const warn=document.getElementById('date-popover-warn');
   if(!s||!e){warn.style.display='none';return false;}
-  const outside=(s<MIN_STR||s>LBD_STR||e<MIN_STR||e>LBD_STR);
+  const outside=(s<MIN_STR||s>TODAY_STR||e<MIN_STR||e>TODAY_STR);
   if(outside){warn.style.display='flex';return false;}
   if(s>e){warn.textContent='Start date must be before end date';warn.style.display='flex';return false;}
   warn.style.display='none';return true;
@@ -822,7 +838,7 @@ function applyDatePicker(){
   document.getElementById('start-input').value=document.getElementById('pop-start').value;
   document.getElementById('end-input').value=document.getElementById('pop-end').value;
   closeDatePicker();
-  ['pwd','wtd','mtd'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
+  ['d0','d1','w0','w1','m0','m1'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
   submitForm();
 }
 
@@ -849,13 +865,13 @@ function setQF(key){
   document.getElementById('start-input').value=f.start;
   document.getElementById('end-input').value=f.end;
   updatePeriodLabel();
-  ['pwd','wtd','mtd'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
+  ['d0','d1','w0','w1','m0','m1'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
   document.getElementById('qf-'+key).classList.add('active-filter');
   submitForm();
 }
 (function(){
   const s=document.getElementById('start-input').value,e=document.getElementById('end-input').value;
-  ['pwd','wtd','mtd'].forEach(k=>{if(QF[k].start===s&&QF[k].end===e)document.getElementById('qf-'+k).classList.add('active-filter');});
+  ['d0','d1','w0','w1','m0','m1'].forEach(k=>{if(QF[k].start===s&&QF[k].end===e)document.getElementById('qf-'+k).classList.add('active-filter');});
 })();
 
 // ── Row filter ──
@@ -911,7 +927,16 @@ function setBeacon(id,value,onV,nearV){
 Chart.defaults.font.family="'Inter',sans-serif";Chart.defaults.font.size=11;
 const ORANGE='#D34108';
 const SLATE='#4d6175';
-const labels=dates.map(d=>{const p=d.split('-');return p[2]+'/'+p[1];});
+const CHART_MODE = "{{ chart_mode }}";
+let labels;
+if(CHART_MODE==='hourly'){
+  labels=dates.map(h=>{const hr=parseInt(h);return hr===0?'12am':hr<12?hr+'am':hr===12?'12pm':(hr-12)+'pm';});
+}else if(CHART_MODE==='weekly'){
+  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  labels=dates.map(d=>dayNames[new Date(d+'T00:00:00').getDay()]);
+}else{
+  labels=dates.map(d=>{const p=d.split('-');return p[2]+'/'+p[1];});
+}
 const ttBase={backgroundColor:'#101828',titleColor:'#fff',bodyColor:'rgba(255,255,255,.85)',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:6,displayColors:false};
 const chartInst={};
 
@@ -950,7 +975,7 @@ function buildLine(cid,data,name,yFmt,tgtVal,showTgt,lineColor,tgtColor,avgVal,a
       return ' '+name+': '+yFmt(item.parsed.y);
     }}}},
     scales:{
-      x:{grid:{display:false},ticks:{color:'#98A2B3',maxTicksLimit:8,maxRotation:0},border:{display:false}},
+      x:{grid:{display:false},ticks:{color:'#98A2B3',maxTicksLimit:CHART_MODE==='daily'?8:20,maxRotation:0},border:{display:false}},
       y:{grid:{color:'#F2F4F7'},ticks:{color:'#98A2B3',callback:v=>yFmt(v)},border:{display:false},beginAtZero:true}
     }
   }});
