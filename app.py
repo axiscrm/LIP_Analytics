@@ -2,7 +2,6 @@ import os
 import json
 import time
 import logging
-import threading
 from datetime import date, datetime, timedelta
 from flask import Flask, render_template, request, Response, stream_with_context, session, redirect, url_for
 from dotenv import load_dotenv
@@ -81,64 +80,6 @@ def post_settings():
     save_settings(data)
     return jsonify({"ok": True})
 
-# ── Auto-refresh: watch for DB data changes ──────────────────────────────────
-# Stores the last known max data date from the DB.
-# A background thread polls every 5 minutes; when the date changes it
-# increments _data_version, which SSE subscribers detect and trigger a reload.
-_data_version   = 0
-_last_known_date = None
-_sse_lock        = threading.Lock()
-
-def _get_max_data_date():
-    """Return the most recent date present in noojee_callrecord, or None."""
-    try:
-        conn = get_connection()
-        cur  = conn.cursor()
-        cur.execute("SELECT MAX(DATE(created)) FROM noojee_callrecord")
-        row = cur.fetchone()
-        cur.close(); conn.close()
-        return row[0] if row else None
-    except Exception:
-        return None
-
-def _watch_db():
-    """Background thread: poll DB every 5 min, bump version on change."""
-    global _data_version, _last_known_date
-    # Wait before first DB call so workers can boot and serve requests first
-    time.sleep(60)
-    with _sse_lock:
-        if _last_known_date is None:
-            _last_known_date = _get_max_data_date()
-    while True:
-        time.sleep(300)   # 5 minutes
-        latest = _get_max_data_date()
-        with _sse_lock:
-            if latest and latest != _last_known_date:
-                _last_known_date = latest
-                _data_version   += 1
-
-# Start the watcher — deferred DB call (60s delay) so it won't block worker boot
-_watcher = threading.Thread(target=_watch_db, daemon=True)
-_watcher.start()
-
-@app.route("/data-version")
-@login_required
-def data_version_stream():
-    """SSE endpoint — sends current version; client reloads when it changes."""
-    def generate():
-        last_sent = None
-        while True:
-            with _sse_lock:
-                v = _data_version
-            if v != last_sent:
-                last_sent = v
-                yield f"data: {v}\n\n"
-            time.sleep(30)   # check every 30 s
-    return Response(
-        stream_with_context(generate()),
-        mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
 SHOW_USER_IDS = {181, 182, 183, 152}
 MIN_DATE = "2026-01-01"
 TZ_OFFSET = "+11:00"   # AEDT — single place to change if needed

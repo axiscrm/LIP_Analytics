@@ -1145,21 +1145,6 @@ function saveTargets(){
   fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(T)});
   closeTargets();rebuildCharts();
 }
-// ── Auto-reload when DB data refreshes ──────────────────────────────────────
-(function(){
-  if(!window.EventSource) return;
-  let knownVersion = null;
-  function connect(){
-    const es = new EventSource('/data-version');
-    es.onmessage = e => {
-      const v = e.data;
-      if(knownVersion === null){ knownVersion = v; return; }
-      if(v !== knownVersion){ location.reload(); }
-    };
-    es.onerror = () => { es.close(); setTimeout(connect, 15000); };
-  }
-  connect();
-})();
 </script>
 </body>
 </html>
