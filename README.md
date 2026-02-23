@@ -50,16 +50,19 @@ A Flask-based analytics dashboard for tracking life insurance adviser performanc
 
    Edit `.env` with your database credentials and settings:
 
-   | Variable | Description |
-   |---|---|
-   | `DB_HOST` | MySQL host |
-   | `DB_PORT` | MySQL port (default `3306`) |
-   | `DB_NAME` | Database name |
-   | `DB_USER` | Database username |
-   | `DB_PASSWORD` | Database password |
-   | `LIP_GROUP_ID` | User group ID to filter advisers (default `56`) |
-   | `SECRET_KEY` | Flask session secret key |
-   | `DASHBOARD_PASSWORD` | Password for dashboard login (leave empty to disable auth) |
+   | Variable             | Description                                                     |
+   |----------------------|-----------------------------------------------------------------|
+   | Variable             | Description                                                     |
+   | `DB_HOST`            | MySQL host                                                      |
+   | `DB_PORT`            | MySQL port (default `3306`)                                     |
+   | `DB_NAME`            | Database name                                                   |
+   | `DB_USER`            | Database username                                               |
+   | `DB_PASSWORD`        | Database password                                               |
+   | `LIP_GROUP_ID`       | User group ID to filter advisers (default `56`)                 |
+   | `SECRET_KEY`         | Flask session secret key                                        |
+   | `DASHBOARD_PASSWORD` | Password for dashboard login (leave empty to disable auth)      |
+   | `AWS_SECRET_NAME`    | *(Optional)* AWS Secrets Manager secret name for DB credentials |
+   | `AWS_REGION`         | *(Optional)* AWS region (default `ap-southeast-2`)              |
 
 4. **Run the development server:**
 
@@ -147,6 +150,33 @@ systemctl status lip_analytics    # check status
 systemctl restart lip_analytics   # restart after code changes
 journalctl -u lip_analytics -f    # tail logs
 ```
+
+## AWS Secrets Manager (Optional)
+
+Instead of storing DB credentials in `.env`, you can load them from AWS Secrets Manager.
+
+1. Create a secret in AWS Secrets Manager with the following JSON keys:
+
+   ```json
+   {
+     "DB_HOST": "your-rds-host.amazonaws.com",
+     "DB_PORT": "3306",
+     "DB_NAME": "your_db_name",
+     "DB_USER": "your_db_username",
+     "DB_PASSWORD": "your_db_password"
+   }
+   ```
+
+2. Add the secret name to `.env`:
+
+   ```
+   AWS_SECRET_NAME=my-app/db-credentials
+   AWS_REGION=ap-southeast-2
+   ```
+
+3. Ensure the server has AWS credentials available (IAM role, environment variables, or `~/.aws/credentials`).
+
+The app will try to load DB credentials from the secret first. If the secret is not set, not found, or unreachable, it falls back to the `DB_*` variables in `.env`.
 
 ## How It Works
 
