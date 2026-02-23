@@ -90,7 +90,8 @@ def _get_max_data_date():
 def _watch_db():
     """Background thread: poll DB every 5 min, bump version on change."""
     global _data_version, _last_known_date
-    # Seed the initial known date on first iteration (deferred from import time)
+    # Wait before first DB call so workers can boot and serve requests first
+    time.sleep(60)
     with _sse_lock:
         if _last_known_date is None:
             _last_known_date = _get_max_data_date()
@@ -102,7 +103,7 @@ def _watch_db():
                 _last_known_date = latest
                 _data_version   += 1
 
-# Start the watcher lazily — no blocking DB call at import time
+# Start the watcher — deferred DB call (60s delay) so it won't block worker boot
 _watcher = threading.Thread(target=_watch_db, daemon=True)
 _watcher.start()
 

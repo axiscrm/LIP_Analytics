@@ -13,13 +13,13 @@ def get_pool():
     if _pool is None:
         _pool = pooling.MySQLConnectionPool(
             pool_name="lip_pool",
-            pool_size=5,          # increased from 3 → avoids exhaustion on rapid navigation
+            pool_size=3,
             host=os.environ["DB_HOST"],
             port=int(os.environ.get("DB_PORT", 3306)),
             database=os.environ["DB_NAME"],
             user=os.environ["DB_USER"],
             password=os.environ["DB_PASSWORD"],
-            connect_timeout=30,
+            connect_timeout=10,
             autocommit=True,
         )
     return _pool
