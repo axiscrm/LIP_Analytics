@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import logging
 import threading
 from datetime import date, datetime, timedelta
 from flask import Flask, render_template, request, Response, stream_with_context, session, redirect, url_for
@@ -9,6 +10,10 @@ from db import get_connection
 from collections import defaultdict
 
 load_dotenv()
+
+log = logging.getLogger("lip_analytics.app")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-me-in-production")
 GROUP_ID = int(os.environ.get("LIP_GROUP_ID", 56))
@@ -136,9 +141,33 @@ def data_version_stream():
     )
 SHOW_USER_IDS = {181, 182, 183, 152}
 MIN_DATE = "2026-01-01"
+TZ_OFFSET = "+11:00"   # AEDT — single place to change if needed
 
 AVATAR_COLORS = {181:"#6366f1",182:"#ec4899",152:"#f59e0b",183:"#10b981"}
 AVATAR_FILES  = {181:"Nataniel.jpeg",182:"Sam.jpeg",152:"Rebel.jpeg",183:"Gary.jpeg"}
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _utc_range(start, end):
+    """Convert local date range to UTC datetime range for index-friendly WHERE clauses.
+
+    Instead of  DATE(CONVERT_TZ(col,'+00:00','+11:00')) BETWEEN start AND end
+    which wraps the column in functions and prevents index usage, we convert the
+    boundaries once:  col >= utc_start AND col < utc_end_exclusive
+    """
+    utc_start = f"CONVERT_TZ('{start.isoformat()}','{TZ_OFFSET}','+00:00')"
+    # end+1 day exclusive so we cover the full last day
+    end_excl  = (end + timedelta(days=1)).isoformat()
+    utc_end   = f"CONVERT_TZ('{end_excl}','{TZ_OFFSET}','+00:00')"
+    return utc_start, utc_end
+
+def _timed(label, fn, *args, **kwargs):
+    """Run fn, log elapsed time, return result."""
+    t0 = time.monotonic()
+    result = fn(*args, **kwargs)
+    elapsed = (time.monotonic() - t0) * 1000
+    log.info("[%s] %.0f ms", label, elapsed)
+    return result
 
 def fmt_hms(seconds):
     s=int(seconds or 0); h,rem=divmod(s,3600); m,sc=divmod(rem,60)
@@ -186,8 +215,10 @@ def get_advisers(cursor):
             for r in cursor.fetchall() if r["id"] in SHOW_USER_IDS]
 
 def get_performance_stats(cursor, start, end):
+    utc_start, utc_end = _utc_range(start, end)
+
     # Talk time from noojee_callrecord via extension → user_id
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT up.user_id,
                COALESCE(SUM(ncr.duration),0)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
@@ -195,9 +226,10 @@ def get_performance_stats(cursor, start, end):
         WHERE up.user_id IN (181,182,183,152)
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
-          AND DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) BETWEEN %s AND %s
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
         GROUP BY up.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """)
     rows = {r["user_id"]: {"talk_secs": float(r["talk_secs"]),
                            "apps_count": 0, "apps_value": 0.0,
                            "inforce_count": 0, "inforce_value": 0.0,
@@ -227,20 +259,21 @@ def get_performance_stats(cursor, start, end):
         rows[uid]["inforce_value"] = float(r["inforce_value"] or 0)
         rows[uid]["days_worked"]   = int(r["days_worked"] or 0)
 
-    # Quotes from leads_leadquote (keep existing logic - already accurate)
-    cursor.execute("""
+    # Quotes from leads_leadquote
+    cursor.execute(f"""
         SELECT lq.user_id, COUNT(*) AS quotes_count, COALESCE(SUM(lq.value),0) AS quotes_value
         FROM leads_leadquote lq
         JOIN (
             SELECT user_id, lead_id, MAX(created) AS max_created
             FROM leads_leadquote
             WHERE sent=1 AND deleted=0
-              AND DATE(CONVERT_TZ(created,'+00:00','+11:00')) BETWEEN %s AND %s
+              AND created >= {utc_start}
+              AND created < {utc_end}
             GROUP BY user_id, lead_id
         ) latest ON lq.user_id=latest.user_id AND lq.lead_id=latest.lead_id
                AND lq.created=latest.max_created
         WHERE lq.sent=1 AND lq.deleted=0 GROUP BY lq.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """)
     for r in cursor.fetchall():
         uid=r["user_id"]
         if uid in rows:
@@ -250,65 +283,58 @@ def get_performance_stats(cursor, start, end):
 
 def get_pipeline_stats(cursor, start, end):
     """
-    Leads funnel logic — all relative to leads ASSIGNED in the period:
-      assigned  : total leads assigned to adviser in period
-      contacted : of those, how many had ANY adviser action on the profile
-                  OR a meaningful call (>10s) during the period
-      no_contact: assigned - contacted
-      booked    : of assigned leads, how many received the LIQ document
-                  (anytime, not restricted to period — they may have booked after)
-      not_booked: contacted - booked  (reached adviser but not yet booked)
-      conv_ac   : contacted / assigned * 100
-      conv_cb   : booked / contacted * 100
-      conv_ab   : booked / assigned * 100
-    Also returns called (simple call count for daily checks tab).
+    Leads funnel logic — all relative to leads ASSIGNED in the period.
     """
+    utc_start, utc_end = _utc_range(start, end)
+
     # 1. Assigned
     cursor.execute("""
         SELECT user_id, COUNT(*) AS assigned FROM leads_lead
-        WHERE DATE(assigned) BETWEEN %s AND %s GROUP BY user_id
-    """, (start.isoformat(), end.isoformat()))
+        WHERE assigned >= %s AND assigned < %s GROUP BY user_id
+    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     assigned = {r["user_id"]: int(r["assigned"]) for r in cursor.fetchall()}
 
     # 2. Contacted = calls >= 5 seconds duration
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT up.user_id, COUNT(*) AS contacted
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
         WHERE up.user_id IN (181,182,183,152)
           AND ncr.duration >= 5000000
           AND ncr.status = 'Hungup'
-          AND DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) BETWEEN %s AND %s
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
         GROUP BY up.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """)
     contacted = {r["user_id"]: int(r["contacted"] or 0) for r in cursor.fetchall()}
 
     # 2b. No Contact = calls < 5 seconds duration
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT up.user_id, COUNT(*) AS no_contact
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
         WHERE up.user_id IN (181,182,183,152)
           AND ncr.duration < 5000000
           AND ncr.status = 'Hungup'
-          AND DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) BETWEEN %s AND %s
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
         GROUP BY up.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """)
     no_contact_totals = {r["user_id"]: int(r["no_contact"] or 0) for r in cursor.fetchall()}
 
     # 3. Booked — of assigned leads, received LIQ doc (anytime on that lead)
     cursor.execute("""
         SELECT l.user_id, COUNT(DISTINCT l.id) AS booked
         FROM leads_lead l
-        WHERE DATE(l.assigned) BETWEEN %s AND %s
+        WHERE l.assigned >= %s AND l.assigned < %s
           AND EXISTS (
             SELECT 1 FROM leads_leadaction la
             WHERE la.object_id=l.id AND la.object_type='lead'
               AND la.action_type='doccreate'
-              AND la.note LIKE '%Life Insurance Questions%%'
+              AND la.note LIKE '%%Life Insurance Questions%%'
           )
         GROUP BY l.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     booked = {r["user_id"]: int(r["booked"]) for r in cursor.fetchall()}
 
     # 4. Called = total calls >= 5s (for daily checks tab)
@@ -321,16 +347,17 @@ def get_schedule_appointments(cursor, today_dt):
     appt_today  = defaultdict(int)
     appt_future = defaultdict(int)
     try:
-        cursor.execute("""
+        utc_today_start = f"CONVERT_TZ('{today_dt.isoformat()}','{TZ_OFFSET}','+00:00')"
+        cursor.execute(f"""
             SELECT user_id,
-                   DATE(CONVERT_TZ(date,'+00:00','+11:00')) AS appt_date,
+                   DATE(CONVERT_TZ(date,'+00:00','{TZ_OFFSET}')) AS appt_date,
                    COUNT(*) AS cnt
             FROM leads_leadschedule
             WHERE object_type = 'task'
-              AND DATE(CONVERT_TZ(date,'+00:00','+11:00')) >= %s
+              AND date >= {utc_today_start}
               AND user_id IS NOT NULL
-            GROUP BY user_id, DATE(CONVERT_TZ(date,'+00:00','+11:00'))
-        """, (today_dt.isoformat(),))
+            GROUP BY user_id, appt_date
+        """)
         for r in cursor.fetchall():
             dt = str(r["appt_date"]) if not hasattr(r["appt_date"], 'isoformat') else r["appt_date"].isoformat()
             uid = r["user_id"]
@@ -339,12 +366,14 @@ def get_schedule_appointments(cursor, today_dt):
             else:
                 appt_future[uid] += int(r["cnt"])
     except Exception as e:
-        print(f"[appt] {e}")
+        log.warning("[appt] %s", e)
     return dict(appt_today), dict(appt_future)
 
 
 def get_daily_series(cursor, start, end):
     """Performance + call-contact daily series per adviser."""
+    utc_start, utc_end = _utc_range(start, end)
+
     # Daily stats from reports_userstats
     cursor.execute("""
         SELECT DATE(date) AS stat_date, user_id,
@@ -372,8 +401,8 @@ def get_daily_series(cursor, start, end):
         }
 
     # Talk time per day from noojee_callrecord
-    cursor.execute("""
-        SELECT DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) AS dt,
+    cursor.execute(f"""
+        SELECT DATE(CONVERT_TZ(ncr.created,'+00:00','{TZ_OFFSET}')) AS dt,
                up.user_id,
                SUM(ncr.duration)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
@@ -381,10 +410,10 @@ def get_daily_series(cursor, start, end):
         WHERE up.user_id IN (181,182,183,152)
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
-          AND DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) BETWEEN %s AND %s
-          AND DAYOFWEEK(DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00'))) NOT IN (1,7)
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
         GROUP BY dt, up.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """)
     for r in cursor.fetchall():
         d = str(r["dt"])[:10]
         uid = r["user_id"]
@@ -412,45 +441,47 @@ def get_daily_series(cursor, start, end):
 
 def get_daily_pipeline_series(cursor, start, end, dates_list):
     """Daily funnel series for Leads charts (assigned, contacted, no_contact, booked)."""
+    utc_start, utc_end = _utc_range(start, end)
+
     # Assigned per day
     cursor.execute("""
         SELECT user_id, DATE(assigned) AS dt, COUNT(*) AS cnt
         FROM leads_lead
-        WHERE DATE(assigned) BETWEEN %s AND %s AND DAYOFWEEK(assigned) NOT IN (1,7)
+        WHERE assigned >= %s AND assigned < %s AND DAYOFWEEK(assigned) NOT IN (1,7)
         GROUP BY user_id, DATE(assigned)
-    """, (start.isoformat(), end.isoformat()))
+    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     assigned_d = defaultdict(lambda: defaultdict(int))
     for r in cursor.fetchall(): assigned_d[r["user_id"]][str(r["dt"])[:10]]=int(r["cnt"])
 
     # Contacted per day = calls >= 5 seconds duration
-    cursor.execute("""
-        SELECT DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) AS dt,
+    cursor.execute(f"""
+        SELECT DATE(CONVERT_TZ(ncr.created,'+00:00','{TZ_OFFSET}')) AS dt,
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
         WHERE up.user_id IN (181,182,183,152)
           AND ncr.duration >= 5000000
           AND ncr.status = 'Hungup'
-          AND DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) BETWEEN %s AND %s
-          AND DAYOFWEEK(DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00'))) NOT IN (1,7)
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
         GROUP BY dt, up.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """)
     contacted_d = defaultdict(lambda: defaultdict(int))
     for r in cursor.fetchall(): contacted_d[r["user_id"]][str(r["dt"])[:10]] = int(r["cnt"] or 0)
 
     # No Contact per day = calls < 5 seconds duration
-    cursor.execute("""
-        SELECT DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) AS dt,
+    cursor.execute(f"""
+        SELECT DATE(CONVERT_TZ(ncr.created,'+00:00','{TZ_OFFSET}')) AS dt,
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
         WHERE up.user_id IN (181,182,183,152)
           AND ncr.duration < 5000000
           AND ncr.status = 'Hungup'
-          AND DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00')) BETWEEN %s AND %s
-          AND DAYOFWEEK(DATE(CONVERT_TZ(ncr.created,'+00:00','+11:00'))) NOT IN (1,7)
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
         GROUP BY dt, up.user_id
-    """, (start.isoformat(), end.isoformat()))
+    """)
     no_contact_d = defaultdict(lambda: defaultdict(int))
     for r in cursor.fetchall(): no_contact_d[r["user_id"]][str(r["dt"])[:10]] = int(r["cnt"] or 0)
 
@@ -458,15 +489,15 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
     cursor.execute("""
         SELECT l.user_id, DATE(l.assigned) AS dt, COUNT(DISTINCT l.id) AS cnt
         FROM leads_lead l
-        WHERE DATE(l.assigned) BETWEEN %s AND %s AND DAYOFWEEK(l.assigned) NOT IN (1,7)
+        WHERE l.assigned >= %s AND l.assigned < %s AND DAYOFWEEK(l.assigned) NOT IN (1,7)
           AND EXISTS (
             SELECT 1 FROM leads_leadaction la
             WHERE la.object_id=l.id AND la.object_type='lead'
               AND la.action_type='doccreate'
-              AND la.note LIKE '%Life Insurance Questions%%'
+              AND la.note LIKE '%%Life Insurance Questions%%'
           )
         GROUP BY l.user_id, DATE(l.assigned)
-    """, (start.isoformat(), end.isoformat()))
+    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     booked_d = defaultdict(lambda: defaultdict(int))
     for r in cursor.fetchall(): booked_d[r["user_id"]][str(r["dt"])[:10]]=int(r["cnt"])
 
@@ -476,6 +507,7 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
 @app.route("/")
 @login_required
 def index():
+    req_t0 = time.monotonic()
     today     = date.today()
     lbd       = last_biz_day()
     min_date_obj = date.fromisoformat(MIN_DATE)
@@ -483,33 +515,31 @@ def index():
     db_max_date = lbd  # picker upper bound — set properly below after DB query
 
     # ── Query DB for actual refresh time and last full data day ──────────────
-    # Done early so lbd and db_max_date are set before date capping below.
     try:
         _conn = get_connection()
         _cur  = _conn.cursor(dictionary=True)
         try:
-            # Last refresh datetime — SQL already returns Sydney time via CONVERT_TZ
             _cur.execute("""
-                SELECT MAX(CONVERT_TZ(created,'+00:00','+11:00')) AS refresh_dt
-                FROM noojee_callrecord
+                SELECT MAX(created) AS max_utc FROM noojee_callrecord
             """)
             _ref = _cur.fetchone()
-            if _ref and _ref["refresh_dt"]:
-                raw_dt = _ref["refresh_dt"]
-                if hasattr(raw_dt, 'strftime'):
-                    # raw_dt is already Sydney time — determine AEST vs AEDT by month
-                    # AEDT (UTC+11): Oct–Apr; AEST (UTC+10): Apr–Oct
+            if _ref and _ref["max_utc"]:
+                raw_utc = _ref["max_utc"]
+                if hasattr(raw_utc, 'strftime'):
+                    # Convert UTC to local manually
+                    raw_dt = raw_utc + timedelta(hours=11)
                     m = raw_dt.month
                     tz_abbr = 'AEDT' if (m >= 10 or m <= 4) else 'AEST'
                     data_updated_str = raw_dt.strftime("%d/%m/%y · %I:%M %p ").lstrip('0') + tz_abbr
                     db_max_date = raw_dt.date()
         except Exception as _e:
-            print(f"[refresh_dt] {_e}")
+            log.warning("[refresh_dt] %s", _e)
         try:
-            # Last full day of data = last date with >10 records
-            _cur.execute("""
-                SELECT DATE(CONVERT_TZ(created,'+00:00','+11:00')) AS day, COUNT(*) AS cnt
+            # Last full day of data — use index-friendly range scan from recent dates
+            _cur.execute(f"""
+                SELECT DATE(CONVERT_TZ(created,'+00:00','{TZ_OFFSET}')) AS day, COUNT(*) AS cnt
                 FROM noojee_callrecord
+                WHERE created >= DATE_SUB(NOW(), INTERVAL 14 DAY)
                 GROUP BY day HAVING cnt > 10
                 ORDER BY day DESC LIMIT 1
             """)
@@ -521,10 +551,10 @@ def index():
                     last_full_day -= timedelta(days=1)
                 lbd = last_full_day
         except Exception as _e:
-            print(f"[last_full_day] {_e}")
+            log.warning("[last_full_day] %s", _e)
         _cur.close(); _conn.close()
     except Exception as _e:
-        print(f"[db_init] {_e}")
+        log.warning("[db_init] %s", _e)
     # ────────────────────────────────────────────────────────────────────────
 
     default_end   = lbd
@@ -548,6 +578,8 @@ def index():
     if end > lbd: end = lbd
     if start > lbd: start = lbd
 
+    log.info("Dashboard request: %s to %s", start, end)
+
     # Single connection for ALL queries — avoids pool exhaustion from multiple connections
     conn=None
     try:
@@ -557,13 +589,13 @@ def index():
 
     cursor=conn.cursor(dictionary=True)
     try:
-        advisers                    = get_advisers(cursor)
-        perf                        = get_performance_stats(cursor,start,end)
-        pipeline                    = get_pipeline_stats(cursor,start,end)
-        biz_days                    = biz_days_in_range(start,end)
-        dates_list,daily_by_user,calls_day = get_daily_series(cursor,start,end)
-        appt_today,appt_future      = get_schedule_appointments(cursor,today)
-        assigned_d,contacted_d,no_contact_d,booked_d = get_daily_pipeline_series(cursor,start,end,dates_list)
+        advisers       = _timed("advisers",    get_advisers, cursor)
+        perf           = _timed("perf_stats",  get_performance_stats, cursor, start, end)
+        pipeline       = _timed("pipeline",    get_pipeline_stats, cursor, start, end)
+        biz_days       = biz_days_in_range(start, end)
+        dates_list, daily_by_user, calls_day = _timed("daily_series", get_daily_series, cursor, start, end)
+        appt_today, appt_future = _timed("appointments", get_schedule_appointments, cursor, today)
+        assigned_d, contacted_d, no_contact_d, booked_d = _timed("daily_pipeline", get_daily_pipeline_series, cursor, start, end, dates_list)
     finally:
         cursor.close(); conn.close()
 
@@ -683,6 +715,9 @@ def index():
         avg_talk_hm = "0:00"
     team_avgs = {"talk_mins": round(avg_talk_s/60, 2), "talk_fmt": avg_talk_hm,
                  "qpd": round(avg_qpd, 2), "apd": round(avg_apd, 2)}
+
+    total_ms = (time.monotonic() - req_t0) * 1000
+    log.info("Dashboard total: %.0f ms", total_ms)
 
     return render_template("dashboard.html",
         start=start.isoformat(), end=end.isoformat(), min_date=MIN_DATE, max_date=db_max_date.isoformat(),
