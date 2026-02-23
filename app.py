@@ -14,13 +14,20 @@ app.secret_key = os.environ.get("SECRET_KEY", "change-me-in-production")
 GROUP_ID = int(os.environ.get("LIP_GROUP_ID", 56))
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 
+# Stamp changes every time the password is updated and the app restarts,
+# invalidating all sessions created with a previous password.
+_password_stamp = hash(DASHBOARD_PASSWORD) if DASHBOARD_PASSWORD else None
+
 def login_required(f):
     """Decorator — redirects to /login if not authenticated."""
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not DASHBOARD_PASSWORD or session.get("authenticated"):
+        if not DASHBOARD_PASSWORD:
             return f(*args, **kwargs)
+        if session.get("authenticated") and session.get("pw_stamp") == _password_stamp:
+            return f(*args, **kwargs)
+        session.clear()
         return redirect(url_for("login", next=request.url))
     return decorated
 
@@ -28,8 +35,10 @@ def login_required(f):
 def login():
     error = None
     if request.method == "POST":
-        if request.form.get("password") == DASHBOARD_PASSWORD:
+        pw = request.form.get("password", "")
+        if pw and pw == DASHBOARD_PASSWORD:
             session["authenticated"] = True
+            session["pw_stamp"] = _password_stamp
             return redirect(request.args.get("next") or url_for("index"))
         error = "Incorrect password."
     return render_template("login.html", error=error)

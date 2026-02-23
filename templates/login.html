@@ -60,11 +60,14 @@
 
 <script>
 document.getElementById('login-form').addEventListener('submit', function(){
-  // Only show loader if there's a password entered (basic check)
   if(document.getElementById('password').value.length > 0){
     document.getElementById('loading-overlay').classList.add('active');
   }
 });
+// Hide overlay if page reloaded with an error (wrong password)
+{% if error %}
+document.getElementById('loading-overlay').classList.remove('active');
+{% endif %}
 </script>
 </body>
 </html>
