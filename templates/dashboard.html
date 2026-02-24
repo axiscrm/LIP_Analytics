@@ -246,21 +246,33 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .ms-option input[type=checkbox]{accent-color:var(--orange);width:15px;height:15px;cursor:pointer}
 .ms-actions{padding:8px 14px 4px;border-top:1px solid var(--g100);margin-top:4px}
 .btn-sm{height:28px;padding:0 10px;font-size:12px}
-/* Remediation popup */
-#remed-modal .modal{width:720px}
-#remed-modal .modal-body{padding:0;max-height:65vh;overflow-y:auto}
-.remed-table-wrap{padding:4px 24px 24px}
-.remed-table{width:100%;border-collapse:collapse;font-size:13px}
-.remed-table thead th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.03em;background:var(--g50);border-bottom:1px solid var(--g200);position:sticky;top:0}
-.remed-table tbody td{padding:10px 12px;border-bottom:1px solid var(--g100);vertical-align:top;color:var(--g700)}
-.remed-table tbody tr:last-child td{border-bottom:none}
-.remed-detail-cell{max-width:260px;white-space:normal;word-break:break-word;font-size:12px;color:var(--g500);line-height:1.4}
-.remed-status{display:inline-flex;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+/* Remediation slide-in panel */
+.remed-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1000;opacity:0;pointer-events:none;transition:opacity .25s ease}
+.remed-backdrop.open{opacity:1;pointer-events:auto}
+.remed-panel{position:fixed;top:0;right:0;width:420px;max-width:100vw;height:100vh;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.1);z-index:1001;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.remed-panel.open{transform:translateX(0)}
+.remed-panel-header{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--g100)}
+.remed-panel-header div:first-child{flex:1;min-width:0}
+.remed-panel-title{font-size:16px;font-weight:600;color:var(--g800);margin:0}
+.remed-panel-sub{font-size:12px;color:var(--g400);margin-top:3px}
+.remed-panel-close{width:32px;height:32px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--g400);flex-shrink:0;margin:-4px -8px 0 8px}
+.remed-panel-close:hover{background:var(--g50);color:var(--g600)}
+.remed-panel-body{flex:1;overflow-y:auto;padding:16px 24px 24px;-webkit-overflow-scrolling:touch}
+.remed-card{background:var(--g50);border:1px solid var(--g100);border-radius:10px;padding:16px 18px;margin-bottom:12px}
+.remed-card:last-child{margin-bottom:0}
+.remed-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.remed-card-client{font-size:14px;font-weight:600;color:var(--g800)}
+.remed-card-client a{color:var(--orange);text-decoration:none;font-weight:600}
+.remed-card-client a:hover{text-decoration:underline}
+.remed-card-date{font-size:11px;color:var(--g400);white-space:nowrap;margin-left:12px}
+.remed-card-field{margin-bottom:10px}
+.remed-card-field:last-child{margin-bottom:0}
+.remed-card-label{font-size:11px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.remed-card-value{font-size:13px;color:var(--g700);line-height:1.5;word-break:break-word}
+.remed-status{display:inline-flex;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
 .remed-status-pending{background:rgba(234,179,8,.15);color:#b45309}
 .remed-status-inprogress{background:rgba(59,130,246,.12);color:#2563eb}
-.remed-link{color:var(--orange);text-decoration:none;font-weight:500}
-.remed-link:hover{text-decoration:underline}
-.remed-empty{text-align:center;padding:40px 24px;color:var(--g400);font-size:13px}
+.remed-empty{text-align:center;padding:48px 24px;color:var(--g400);font-size:13px}
 
 /* Column group shading removed */
 @media(max-width:768px){
@@ -304,10 +316,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   .thr-inputs-row{gap:6px}
   .tgt-line-row{margin-bottom:10px}
   .tgt-color-label{display:none}
-  /* Remediation modal */
-  #remed-modal .modal-body{max-height:none;overflow-y:visible}
-  .remed-table-wrap{padding:4px 14px 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .remed-table{min-width:520px}
+  /* Remediation panel */
+  .remed-panel{width:100vw}
 }
 </style>
 </head>
@@ -458,7 +468,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         {{ cth("Apps #","Applications created in the selected period.") }}
         {{ cth("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD") }}
         {{ cth("Inforce #","Apps completed (inforce) in the selected period.") }}
-        {{ cth("Inforce $","Sum of premium for completed apps.") }}
+        {{ cth("Inforce $","Cumulative commission for completed (inforce) apps.") }}
         {{ cth("A→C %","Contacted ÷ Assigned × 100. Lead contact rate.") }}
         {{ cth("C→B %","Booked ÷ Contacted × 100. Contact-to-book conversion.") }}
         {{ cth("A→B %","Booked ÷ Assigned × 100. Overall conversion rate.") }}
@@ -516,7 +526,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 
   <div class="chart-grid">
     <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Applications $</div></div><div class="chart-card-total" id="kpi-checks-apps">—</div><div class="chart-card-sub">cumulative application commission</div><div class="chart-wrap"><canvas id="chart-checks-apps"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div></div><div class="chart-card-total" id="kpi-checks-inf">—</div><div class="chart-card-sub">cumulative inforce premium</div><div class="chart-wrap"><canvas id="chart-checks-inf"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div></div><div class="chart-card-total" id="kpi-checks-inf">—</div><div class="chart-card-sub">cumulative inforce commission</div><div class="chart-wrap"><canvas id="chart-checks-inf"></canvas></div></div>
   </div>
 </div><!-- /checks panel -->
 <div id="perf" class="panel">
@@ -548,7 +558,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       {{ th2("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
       {{ th2("Q-App %","Apps ÷ Quotes × 100.","d") }}
       {{ th2("Inforce #","Apps completed in period.","d") }}
-      {{ th2("Inforce $","Sum of premium for completed apps. Threshold-highlighted.","d") }}
+      {{ th2("Inforce $","Cumulative commission for completed (inforce) apps. Threshold-highlighted.","d") }}
       <th colspan="2" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Remediations</div></th>
       </tr>
       <tr>
@@ -612,7 +622,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 
   <div class="chart-grid">
     <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Applications $</div></div><div class="chart-card-total" id="kpi-perf-apps">—</div><div class="chart-card-sub">cumulative application commission</div><div class="chart-wrap"><canvas id="chart-perf-apps"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-perf-inf"></span></div><div class="chart-card-total" id="kpi-perf-inf">—</div><div class="chart-card-sub">cumulative inforce premium</div><div class="chart-wrap"><canvas id="chart-perf-inf"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-perf-inf"></span></div><div class="chart-card-total" id="kpi-perf-inf">—</div><div class="chart-card-sub">cumulative inforce commission</div><div class="chart-wrap"><canvas id="chart-perf-inf"></canvas></div></div>
   </div>
 </div>
 
@@ -709,38 +719,19 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 </div>
 
-<!-- ══ REMEDIATION DETAIL MODAL ══ -->
-<div class="modal-overlay" id="remed-modal" onclick="closeRemedOutside(event)">
-  <div class="modal">
-    <div class="modal-header">
-      <div>
-        <div class="modal-title" id="remed-modal-title">Pending Remediations</div>
-        <div class="modal-title-sub" id="remed-modal-sub"></div>
-      </div>
-      <button class="modal-close" onclick="closeRemed()">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </button>
+<!-- ══ REMEDIATION SLIDE-IN PANEL ══ -->
+<div class="remed-backdrop" id="remed-backdrop" onclick="closeRemed()"></div>
+<div class="remed-panel" id="remed-panel">
+  <div class="remed-panel-header">
+    <div>
+      <div class="remed-panel-title" id="remed-panel-title">Pending Remediations</div>
+      <div class="remed-panel-sub" id="remed-panel-sub"></div>
     </div>
-    <div class="modal-body">
-      <div class="remed-table-wrap">
-        <table class="remed-table">
-          <thead>
-            <tr>
-              <th>Created</th>
-              <th>Status</th>
-              <th>Client</th>
-              <th>Task</th>
-              <th>Detail</th>
-            </tr>
-          </thead>
-          <tbody id="remed-modal-tbody"></tbody>
-        </table>
-      </div>
-      <div id="remed-modal-empty" class="remed-empty" style="display:none">
-        No pending remediations in this period.
-      </div>
-    </div>
+    <button class="remed-panel-close" onclick="closeRemed()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
   </div>
+  <div class="remed-panel-body" id="remed-panel-body"></div>
 </div>
 
 <!-- Toast -->
@@ -1219,32 +1210,46 @@ const REMED_CLS={0:'remed-status-pending',1:'remed-status-inprogress'};
 function openRemed(uid){
   const items=remedDetails[uid]||[];
   const advName=allAdvisers.find(a=>a.uid===uid)?.name||'Adviser';
-  document.getElementById('remed-modal-title').textContent='Pending Remediations — '+advName;
-  document.getElementById('remed-modal-sub').textContent=items.length+' item'+(items.length!==1?'s':'');
-  const tbody=document.getElementById('remed-modal-tbody');
-  const empty=document.getElementById('remed-modal-empty');
-  if(!items.length){tbody.innerHTML='';empty.style.display='block';}
-  else{
-    empty.style.display='none';
-    tbody.innerHTML=items.map(it=>{
+  document.getElementById('remed-panel-title').textContent='Pending Remediations — '+advName;
+  document.getElementById('remed-panel-sub').textContent=items.length+' item'+(items.length!==1?'s':'');
+  const body=document.getElementById('remed-panel-body');
+  if(!items.length){
+    body.innerHTML='<div class="remed-empty">No pending remediations in this period.</div>';
+  } else {
+    body.innerHTML=items.map(it=>{
       const stLbl=REMED_STATUS[it.status]||'Unknown';
       const stCls=REMED_CLS[it.status]||'';
-      const clientLink=`<a class="remed-link" href="${CRM_BASE}/leads/${it.lead_id}/" target="_blank">${it.client_name||'Client #'+it.lead_id}</a>`;
-      const detail=it.description||it.last_note||'—';
-      const detailShort=detail.length>200?detail.substring(0,200)+'…':detail;
-      return `<tr>
-        <td style="white-space:nowrap">${it.created_date}</td>
-        <td><span class="remed-status ${stCls}">${stLbl}</span></td>
-        <td>${clientLink}</td>
-        <td style="white-space:nowrap">${it.task_name}</td>
-        <td class="remed-detail-cell" title="${detail.replace(/"/g,'&quot;')}">${detailShort}</td>
-      </tr>`;
+      const clientLink=`<a href="${CRM_BASE}/leads/${it.lead_id}/" target="_blank">${it.client_name||'Client #'+it.lead_id}</a>`;
+      const detail=it.description||it.last_note||'';
+      return `<div class="remed-card">
+        <div class="remed-card-top">
+          <div class="remed-card-client">${clientLink}</div>
+          <div class="remed-card-date">${it.created_date}</div>
+        </div>
+        <div class="remed-card-field">
+          <div class="remed-card-label">Status</div>
+          <div class="remed-card-value"><span class="remed-status ${stCls}">${stLbl}</span></div>
+        </div>
+        <div class="remed-card-field">
+          <div class="remed-card-label">Task</div>
+          <div class="remed-card-value">${it.task_name}</div>
+        </div>
+        ${detail?`<div class="remed-card-field">
+          <div class="remed-card-label">Detail</div>
+          <div class="remed-card-value">${detail.length>300?detail.substring(0,300)+'…':detail}</div>
+        </div>`:''}
+      </div>`;
     }).join('');
   }
-  document.getElementById('remed-modal').classList.add('open');
+  document.getElementById('remed-backdrop').classList.add('open');
+  document.getElementById('remed-panel').classList.add('open');
+  document.body.style.overflow='hidden';
 }
-function closeRemed(){document.getElementById('remed-modal').classList.remove('open');}
-function closeRemedOutside(e){if(e.target===document.getElementById('remed-modal'))closeRemed();}
+function closeRemed(){
+  document.getElementById('remed-backdrop').classList.remove('open');
+  document.getElementById('remed-panel').classList.remove('open');
+  document.body.style.overflow='';
+}
 document.addEventListener('click',function(e){
   const link=e.target.closest('.remed-pending-link');
   if(link){e.preventDefault();openRemed(parseInt(link.dataset.uid));}
