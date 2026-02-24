@@ -631,7 +631,7 @@ def get_remediation_stats(cursor, start, end):
             "pending": int(r["pending_remed"] or 0),
         }
 
-    # 2. Detailed pending records (for the popup)
+    # 2. Detailed records — all statuses (pending + resolved) for slide-in panel
     cursor.execute(f"""
         SELECT lr.id            AS req_id,
                lr.lead_id,
@@ -649,10 +649,9 @@ def get_remediation_stats(cursor, start, end):
         JOIN leads_lead l ON l.id = lr.lead_id
         WHERE lr.type_id IN ({REMED_TYPE_IDS_SQL})
           AND l.user_id IN ({_USER_IDS_SQL})
-          AND lr.status IN (0,1)
           AND lr.created >= {utc_start}
           AND lr.created <  {utc_end}
-        ORDER BY lr.created DESC
+        ORDER BY lr.created ASC
     """)
     details = defaultdict(list)
     for r in cursor.fetchall():
