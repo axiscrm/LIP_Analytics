@@ -402,11 +402,11 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   <input type="hidden" name="adviser" id="adviser-input" value="{% if selected_advisers %}{{ selected_advisers|join(',') }}{% else %}team{% endif %}">
   <div class="ms-dropdown" id="adviser-dropdown">
     <button type="button" class="btn btn-ghost ms-btn" id="ms-btn" onclick="toggleAdviserDD()">
-      <span id="ms-label">{% if not selected_advisers %}All Advisers{% elif selected_advisers|length == 1 %}{% for r in perf_rows %}{% if r.user_id|string == selected_advisers[0] %}{{ r.name }}{% endif %}{% endfor %}{% else %}{{ selected_advisers|length }} Advisers{% endif %}</span>
+      <span id="ms-label">{% if not selected_advisers %}All Advisers{% elif selected_advisers|length == 1 %}{% for r in perf_rows %}{% if r.user_id|string == selected_advisers[0] %}{{ r.name }}{% endif %}{% endfor %}{% else %}LIP Team{% endif %}</span>
       <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="ms-panel" id="ms-panel">
-      <label class="ms-option"><input type="checkbox" id="ms-all" onchange="msToggleAll(this.checked)" {% if not selected_advisers %}checked{% endif %}><span>All Advisers</span></label>
+      <label class="ms-option"><input type="checkbox" id="ms-all" onchange="msToggleAll(this.checked)" {% if not selected_advisers %}checked{% endif %}><span>Select All</span></label>
       {% for r in perf_rows %}
       <label class="ms-option"><input type="checkbox" class="ms-adv" value="{{ r.user_id }}" onchange="msAdvChanged()" {% if not selected_advisers or r.user_id|string in selected_advisers %}checked{% endif %}><span>{{ r.name }}</span></label>
       {% endfor %}
@@ -597,27 +597,12 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 
       <div class="tgt-line-row">
         <div class="tgt-field"><label>Talk / Day</label><input type="number" id="t-talk-tgt" min="0" step="5" placeholder="150"><div class="tgt-hint">Default 150 (2h 30m)</div></div>
-        <div class="tgt-row-bottom">
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-talk-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="talk-line-color-preview"><input type="color" id="t-talk-line-color" oninput="previewTgtColor('talk-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="talk-tgt-color-preview"><input type="color" id="t-talk-tgt-color" oninput="previewTgtColor('talk-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="talk-avg-color-preview"><input type="color" id="t-talk-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
-        </div>
       </div>
       <div class="tgt-line-row">
         <div class="tgt-field"><label>Quotes / Day</label><input type="number" id="t-q-tgt" min="0" step="1" placeholder="6"><div class="tgt-hint">Default 6</div></div>
-        <div class="tgt-row-bottom">
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-q-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-q" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="q-line-color-preview"><input type="color" id="t-q-line-color" oninput="previewTgtColor('q-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="q-tgt-color-preview"><input type="color" id="t-q-tgt-color" oninput="previewTgtColor('q-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="q-avg-color-preview"><input type="color" id="t-q-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
-        </div>
       </div>
       <div class="tgt-line-row">
         <div class="tgt-field"><label>Apps / Day</label><input type="number" id="t-a-tgt" min="0" step="0.5" placeholder="2"><div class="tgt-hint">Default 2</div></div>
-        <div class="tgt-row-bottom">
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-a-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-a" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="a-line-color-preview"><input type="color" id="t-a-line-color" oninput="previewTgtColor('a-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="a-tgt-color-preview"><input type="color" id="t-a-tgt-color" oninput="previewTgtColor('a-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="a-avg-color-preview"><input type="color" id="t-a-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
-        </div>
       </div>
       <div class="tgt-line-row">
         <div class="tgt-field"><label>Inforce $ / Month — Per Adviser</label>
@@ -739,11 +724,9 @@ const QF = {
 
 // ── Targets ──
 const DEFAULTS={
-  talkTgt:150,showTalkTgt:true,qTgt:6,showQTgt:true,aTgt:2,showATgt:true,
+  talkTgt:150,qTgt:6,aTgt:2,
   infTgts:{181:20000,182:20000,183:20000,152:20000,53:20000},showInfTgt:true,
-  showAvgTalk:true,showAvgQ:true,showAvgA:true,avgLineColor:'#7f56d9',
-  talkLineColor:'#7f56d9',qLineColor:'#7f56d9',aLineColor:'#7f56d9',infLineColor:'#7f56d9',
-  talkTgtColor:'#12B76A',qTgtColor:'#12B76A',aTgtColor:'#12B76A',infTgtColor:'#12B76A',
+  aLineColor:'#7f56d9',infLineColor:'#7f56d9',infTgtColor:'#12B76A',
   talkOn:150,talkNear:120,talkBelow:0,qOn:6,qNear:4,qBelow:0,aOn:2,aNear:1,aBelow:0,infOn:20000,infNear:15000,infBelow:0,
   onColor:'#12B76A',onEnabled:true,nearColor:'#EAB308',nearEnabled:true,belowColor:'#B42318',belowEnabled:true,
 };
@@ -880,6 +863,10 @@ function msApply(){
   const all=document.getElementById('ms-all').checked;
   const checked=[...document.querySelectorAll('.ms-adv:checked')].map(cb=>cb.value);
   document.getElementById('adviser-input').value=all?'team':checked.join(',');
+  const lbl=document.getElementById('ms-label');
+  if(all) lbl.textContent='All Advisers';
+  else if(checked.length===1){const nm=document.querySelector(`.ms-adv[value="${checked[0]}"]`);lbl.textContent=nm?nm.closest('label').textContent.trim():'1 Adviser';}
+  else lbl.textContent='LIP Team';
   document.getElementById('ms-panel').classList.remove('open');
   submitForm();
 }
@@ -1090,26 +1077,15 @@ try { rebuildCharts(); } catch(e) {
 
 function openTargets(){
   document.getElementById('t-talk-tgt').value=T.talkTgt;
-  document.getElementById('t-talk-tgt-show').checked=T.showTalkTgt;
   document.getElementById('t-q-tgt').value=T.qTgt;
-  document.getElementById('t-q-tgt-show').checked=T.showQTgt;
   document.getElementById('t-a-tgt').value=T.aTgt;
-  document.getElementById('t-a-tgt-show').checked=T.showATgt;
   allAdvisers.forEach(a=>{ const el=document.getElementById('t-inf-tgt-'+a.uid); if(el) el.value=T.infTgts[a.uid]||20000; });
   document.getElementById('t-inf-tgt-show').checked=T.showInfTgt;
-  document.getElementById('t-show-avg').checked=T.showAvgTalk;
-  document.getElementById('t-show-avg-q').checked=T.showAvgQ;
-  document.getElementById('t-show-avg-a').checked=T.showAvgA;
   document.getElementById('inf-tgt-hint').textContent=`Team target = sum of individual targets`;
-  ['talk','q','a','inf'].forEach(k=>{
-    document.getElementById(`t-${k}-line-color`).value=T[`${k}LineColor`];
-    document.getElementById(`t-${k}-tgt-color`).value=T[`${k}TgtColor`];
-    const avgEl=document.getElementById(`t-${k}-avg-color`);
-    if(avgEl) avgEl.value=T.avgLineColor;
-    previewTgtColor(`${k}-line`,T[`${k}LineColor`]);
-    previewTgtColor(`${k}-tgt`,T[`${k}TgtColor`]);
-    previewTgtColor(`${k}-avg`,T.avgLineColor);
-  });
+  document.getElementById('t-inf-line-color').value=T.infLineColor;
+  document.getElementById('t-inf-tgt-color').value=T.infTgtColor;
+  previewTgtColor('inf-line',T.infLineColor);
+  previewTgtColor('inf-tgt',T.infTgtColor);
   document.getElementById('thr-on-color').value=T.onColor;
   document.getElementById('thr-on-enabled').checked=T.onEnabled;
   document.getElementById('thr-near-color').value=T.nearColor;
@@ -1153,16 +1129,12 @@ function bv(id){return g(id).checked;}
 
 function saveTargets(){
   T={
-    talkTgt:fv('t-talk-tgt',150),showTalkTgt:bv('t-talk-tgt-show'),
-    qTgt:fv('t-q-tgt',6),showQTgt:bv('t-q-tgt-show'),
-    aTgt:fv('t-a-tgt',2),showATgt:bv('t-a-tgt-show'),
+    talkTgt:fv('t-talk-tgt',150),
+    qTgt:fv('t-q-tgt',6),
+    aTgt:fv('t-a-tgt',2),
     infTgts:Object.fromEntries(allAdvisers.map(a=>[a.uid,parseFloat(document.getElementById('t-inf-tgt-'+a.uid)?.value)||20000])),
     showInfTgt:bv('t-inf-tgt-show'),
-    showAvgTalk:bv('t-show-avg'),showAvgQ:bv('t-show-avg-q'),showAvgA:bv('t-show-avg-a'),
-    avgLineColor:g('t-talk-avg-color').value,
-    talkLineColor:g('t-talk-line-color').value,talkTgtColor:g('t-talk-tgt-color').value,
-    qLineColor:g('t-q-line-color').value,qTgtColor:g('t-q-tgt-color').value,
-    aLineColor:g('t-a-line-color').value,aTgtColor:g('t-a-tgt-color').value,
+    aLineColor:T.aLineColor||'#7f56d9',
     infLineColor:g('t-inf-line-color').value,infTgtColor:g('t-inf-tgt-color').value,
     onColor:g('thr-on-color').value,onEnabled:bv('thr-on-enabled'),
     nearColor:g('thr-near-color').value,nearEnabled:bv('thr-near-enabled'),
