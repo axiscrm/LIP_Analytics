@@ -86,6 +86,9 @@ TZ_OFFSET = "+11:00"   # AEDT — single place to change if needed
 CONTACT_THRESHOLD_US = 45_000_000  # 45 seconds in microseconds
 _USER_IDS_SQL = ",".join(str(u) for u in sorted(SHOW_USER_IDS))
 
+CRM_BASE_URL = "https://crm.slife.com.au"
+REMED_TYPE_IDS_SQL = "138,139,140,141,142,143,144,145,162,163,164,165,189,197"
+
 AVATAR_COLORS = {181:"#6366f1",182:"#ec4899",152:"#f59e0b",183:"#10b981",53:"#3b82f6"}
 AVATAR_FILES  = {181:"Nataniel.jpeg",182:"Sam.jpeg",152:"Rebel.jpeg",183:"Gary.jpeg",53:""}
 
@@ -604,6 +607,72 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
     return dict(assigned_d), dict(contacted_d), dict(no_contact_d), dict(booked_d)
 
 
+def get_remediation_stats(cursor, start, end):
+    """Remediation aggregate counts per adviser + pending detail for popup."""
+    utc_start, utc_end = _utc_range(start, end)
+
+    # 1. Aggregate counts: Total (any status) and Pending (status 0/1) in date range
+    cursor.execute(f"""
+        SELECT l.user_id,
+               COUNT(*)                                       AS total_remed,
+               SUM(CASE WHEN lr.status IN (0,1) THEN 1 ELSE 0 END) AS pending_remed
+        FROM leads_leadrequirement lr
+        JOIN leads_lead l ON l.id = lr.lead_id
+        WHERE lr.type_id IN ({REMED_TYPE_IDS_SQL})
+          AND l.user_id IN ({_USER_IDS_SQL})
+          AND lr.created >= {utc_start}
+          AND lr.created <  {utc_end}
+        GROUP BY l.user_id
+    """)
+    counts = {}
+    for r in cursor.fetchall():
+        counts[r["user_id"]] = {
+            "total": int(r["total_remed"]),
+            "pending": int(r["pending_remed"] or 0),
+        }
+
+    # 2. Detailed pending records (for the popup)
+    cursor.execute(f"""
+        SELECT lr.id            AS req_id,
+               lr.lead_id,
+               lr.object_type,
+               lr.object_id,
+               lr.name          AS task_name,
+               lr.description,
+               lr.last_note,
+               lr.status,
+               DATE(CONVERT_TZ(lr.created,'+00:00','{TZ_OFFSET}')) AS created_date,
+               l.user_id        AS adviser_id,
+               CONCAT(l.first_name,' ',l.last_name)               AS client_name,
+               CASE WHEN lr.object_type='application' THEN lr.object_id ELSE NULL END AS app_id
+        FROM leads_leadrequirement lr
+        JOIN leads_lead l ON l.id = lr.lead_id
+        WHERE lr.type_id IN ({REMED_TYPE_IDS_SQL})
+          AND l.user_id IN ({_USER_IDS_SQL})
+          AND lr.status IN (0,1)
+          AND lr.created >= {utc_start}
+          AND lr.created <  {utc_end}
+        ORDER BY lr.created DESC
+    """)
+    details = defaultdict(list)
+    for r in cursor.fetchall():
+        details[r["adviser_id"]].append({
+            "req_id": r["req_id"],
+            "lead_id": r["lead_id"],
+            "object_type": r["object_type"],
+            "object_id": r["object_id"],
+            "task_name": r["task_name"],
+            "description": (r["description"] or "").strip(),
+            "last_note": (r["last_note"] or "").strip(),
+            "status": int(r["status"]),
+            "created_date": str(r["created_date"]),
+            "client_name": (r["client_name"] or "").strip(),
+            "app_id": r["app_id"],
+        })
+
+    return counts, dict(details)
+
+
 @app.route("/")
 @login_required
 def index():
@@ -709,6 +778,7 @@ def index():
         if not is_single_day:
             dates_list = [d for d in dates_list if date.fromisoformat(d).weekday() < 5]
         appt_today, appt_future = _timed("appointments", get_schedule_appointments, cursor, today)
+        remed_counts, remed_details = _timed("remediations", get_remediation_stats, cursor, start, end)
     finally:
         cursor.close(); conn.close()
 
@@ -776,6 +846,8 @@ def index():
             "inforce_count":inforce_count,"inforce_value":inforce_value,
             "inforce_color":color_inforce(monthly_inf),
             "assigned":assigned,
+            "remed_pending":remed_counts.get(uid,{}).get("pending",0),
+            "remed_total":remed_counts.get(uid,{}).get("total",0),
         })
         checks_rows.append({**base,
             "assigned":assigned,"contacted":contacted,"not_contacted":no_contact,
@@ -864,6 +936,8 @@ def index():
         m1_start=m1_start.isoformat(), m1_end=m1_end.isoformat(),
         team_avgs=team_avgs,
         chart_mode=chart_mode,
+        remed_details=remed_details,
+        crm_base_url=CRM_BASE_URL,
     )
 
 

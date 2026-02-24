@@ -246,6 +246,14 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .ms-option input[type=checkbox]{accent-color:var(--orange);width:15px;height:15px;cursor:pointer}
 .ms-actions{padding:8px 14px 4px;border-top:1px solid var(--g100);margin-top:4px}
 .btn-sm{height:28px;padding:0 10px;font-size:12px}
+/* Remediation popup table */
+#remed-modal-tbody td{padding:8px 10px;font-size:12px;border-bottom:1px solid var(--g100);vertical-align:top;color:var(--g700)}
+#remed-modal-tbody td:last-child{max-width:280px;white-space:normal;word-break:break-word}
+.remed-status{display:inline-flex;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.remed-status-pending{background:rgba(234,179,8,.15);color:#b45309}
+.remed-status-inprogress{background:rgba(59,130,246,.12);color:#2563eb}
+.remed-link{color:var(--orange);text-decoration:none;font-weight:500}
+.remed-link:hover{text-decoration:underline}
 
 /* Column group shading removed */
 @media(max-width:768px){
@@ -453,7 +461,13 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
     </thead>
     <tbody id="checks-tbody">
       {% for r in checks_rows %}
-      <tr class="adviser-row" data-uid="{{ r.user_id }}">
+      <tr class="adviser-row" data-uid="{{ r.user_id }}"
+          data-assigned="{{ r.assigned }}" data-contacted="{{ r.contacted }}"
+          data-nc="{{ r.not_contacted }}" data-booked="{{ r.booked }}"
+          data-quotes="{{ r.quotes_count }}" data-apps="{{ r.apps_count }}" data-apps-val="{{ r.apps_value }}"
+          data-inf-count="{{ r.inforce_count }}" data-inf-val="{{ r.inforce_value }}"
+          data-td="{{ r.today_disc }}" data-tf="{{ r.today_fu }}" data-tq="{{ r.today_q }}"
+          data-fd="{{ r.future_disc }}" data-ff="{{ r.future_fu }}" data-fq="{{ r.future_q }}">
         <td><div class="avatar-cell">
           {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
           {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
@@ -495,8 +509,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 </div><!-- /checks panel -->
 <div id="perf" class="panel">
-  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0,asgn=0) %}
-  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% set t.asgn=t.asgn+r.assigned %}{% endfor %}
+  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0,asgn=0,rp=0,rt=0) %}
+  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% set t.asgn=t.asgn+r.assigned %}{% set t.rp=t.rp+r.remed_pending %}{% set t.rt=t.rt+r.remed_total %}{% endfor %}
 
   <div class="legend">
     <span class="legend-item"><span class="beacon beacon-on"></span>On target</span>
@@ -505,32 +519,44 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 
   <div class="table-outer"><div class="table-scroll"><table>
-    <thead><tr>
-      {% macro th(label,tip,cg='') %}<th {% if cg %}data-cg="{{ cg }}"{% endif %}><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
-      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
-      <th><div class="th-inner">Days<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Business days where adviser made at least 1 call or sent at least 1 quote.</div></div></div></th>
-      {{ th("Assigned","Total leads assigned to this adviser in the period.") }}
-      {{ th("Talk Time","Total call duration via noojee_callrecord.","b") }}
-      {{ th("Talk / Day","Total talk time ÷ days worked. Threshold-highlighted.","b") }}
-      {{ th("Quotes #","Distinct leads quoted (last quote per lead).","c") }}
-      {{ th("Quote Total $","Sum of last quote value per lead in period.","c") }}
-      {{ th("Quote Avg $","Quote Total ÷ Quotes count.","c") }}
-      {{ th("Quotes / Day","Quotes ÷ days worked. Threshold-highlighted.","c") }}
-      {{ th("Apps #","Applications created in period.","d") }}
-      {{ th("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD","d") }}
-      {{ th("APPS AVG $","Application commission ÷ number of applications.","d") }}
-      {{ th("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
-      {{ th("Q-App %","Apps ÷ Quotes × 100.","d") }}
-      {{ th("Inforce #","Apps completed in period.","d") }}
-      {{ th("Inforce $","Sum of premium for completed apps. Threshold-highlighted.","d") }}
-    </tr></thead>
+    <thead>
+      {% macro th2(label,tip,cg='') %}<th rowspan="2" {% if cg %}data-cg="{{ cg }}"{% endif %}><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
+      <tr>
+      <th style="min-width:180px" rowspan="2"><div class="th-inner">Adviser</div></th>
+      <th rowspan="2"><div class="th-inner">Days<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Business days where adviser made at least 1 call or sent at least 1 quote.</div></div></div></th>
+      {{ th2("Assigned","Total leads assigned to this adviser in the period.") }}
+      {{ th2("Talk Time","Total call duration via noojee_callrecord.","b") }}
+      {{ th2("Talk / Day","Total talk time ÷ days worked. Threshold-highlighted.","b") }}
+      {{ th2("Quotes #","Distinct leads quoted (last quote per lead).","c") }}
+      {{ th2("Quote Total $","Sum of last quote value per lead in period.","c") }}
+      {{ th2("Quote Avg $","Quote Total ÷ Quotes count.","c") }}
+      {{ th2("Quotes / Day","Quotes ÷ days worked. Threshold-highlighted.","c") }}
+      {{ th2("Apps #","Applications created in period.","d") }}
+      {{ th2("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD","d") }}
+      {{ th2("APPS AVG $","Application commission ÷ number of applications.","d") }}
+      {{ th2("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
+      {{ th2("Q-App %","Apps ÷ Quotes × 100.","d") }}
+      {{ th2("Inforce #","Apps completed in period.","d") }}
+      {{ th2("Inforce $","Sum of premium for completed apps. Threshold-highlighted.","d") }}
+      <th colspan="2" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Remediations</div></th>
+      </tr>
+      <tr>
+        <th><div class="th-inner">Pending</div></th>
+        <th><div class="th-inner">Total</div></th>
+      </tr>
+    </thead>
     <tbody id="perf-tbody">
       {% for r in perf_rows %}
       <tr class="adviser-row" data-uid="{{ r.user_id }}"
+          data-days="{{ r.days_worked }}" data-assigned="{{ r.assigned }}"
+          data-talk-s="{{ r.talk_time_s }}" data-talk-pd-s="{{ r.talk_per_day_s }}"
           data-talk-mins="{{ (r.talk_per_day.split(':')[0]|int*60+r.talk_per_day.split(':')[1]|int) if ':' in r.talk_per_day else 0 }}"
+          data-quotes="{{ r.quotes_count }}" data-quote-val="{{ r.quote_total }}"
           data-qpd="{{ r.quotes_per_day }}"
+          data-apps="{{ r.apps_count }}" data-apps-val="{{ r.apps_value }}"
           data-apd="{{ r.apps_per_day }}"
-          data-inf="{{ r.inforce_value }}">
+          data-inf-count="{{ r.inforce_count }}" data-inf="{{ r.inforce_value }}"
+          data-remed-pending="{{ r.remed_pending }}" data-remed-total="{{ r.remed_total }}">
         <td><div class="avatar-cell">
           {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
           {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
@@ -551,6 +577,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         <td data-cg="d">{{ r.q2a_pct }}%</td>
         <td data-cg="d">{{ r.inforce_count }}</td>
         <td data-cg="d"><span class="badge badge-{{ r.inforce_color }}" data-badge="inf">${{ "{:,.0f}".format(r.inforce_value) }}</span></td>
+        <td>{% if r.remed_pending > 0 %}<a href="#" class="remed-pending-link" data-uid="{{ r.user_id }}" style="color:var(--below-color,#B42318);font-weight:600;text-decoration:underline;cursor:pointer">{{ r.remed_pending }}</a>{% else %}0{% endif %}</td>
+        <td>{{ r.remed_total }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -567,6 +595,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       <td data-cg="d">{{ t.apps }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval) }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval/t.apps if t.apps else 0) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
       <td data-cg="d">{{ "{:.1f}".format(t.apps/t.q*100 if t.q else 0) }}%</td>
       <td data-cg="d">{{ t.inf }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td>
+      <td>{{ t.rp }}</td><td>{{ t.rt }}</td>
     </tr></tfoot>
   </table></div></div>
 
@@ -669,6 +698,39 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 </div>
 
+<!-- ══ REMEDIATION DETAIL MODAL ══ -->
+<div class="modal-overlay" id="remed-modal" onclick="closeRemedOutside(event)">
+  <div class="modal" style="width:820px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="remed-modal-title">Pending Remediations</div>
+        <div class="modal-title-sub" id="remed-modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeRemed()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:0 0 12px;max-height:70vh;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--g50);border-bottom:1px solid var(--g200);position:sticky;top:0">
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Created</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Status</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">App ID</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Client</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Task</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Detail</th>
+          </tr>
+        </thead>
+        <tbody id="remed-modal-tbody"></tbody>
+      </table>
+      <div id="remed-modal-empty" style="display:none;text-align:center;padding:32px;color:var(--g400);font-size:13px">
+        No pending remediations in this period.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <svg class="toast-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L14 13H2L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3M8 10.5h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -684,6 +746,8 @@ const MONTHS          = {{ months }};
 const TEAM_AVGS       = {{ team_avgs | tojson }};
 const allAdvisers     = {{ chart_advisers | tojson }};
 const checksRawData   = {{ checks_rows | tojson }};
+const remedDetails    = {{ remed_details | tojson }};
+const CRM_BASE        = "{{ crm_base_url }}";
 
 // Build per-adviser inforce target inputs inside modal
 (function(){
@@ -874,16 +938,62 @@ function setQF(key){
   ['d0','d1','w0','w1','m0','m1'].forEach(k=>{if(QF[k].start===s&&QF[k].end===e)document.getElementById('qf-'+k).classList.add('active-filter');});
 })();
 
-// ── Row filter (multi-select) ──
+// ── Row filter (multi-select) + dynamic footer recalculation ──
 function filterRows(){
   document.querySelectorAll('.adviser-row').forEach(r=>{
     r.style.display=selectedAdvisers.has(parseInt(r.dataset.uid))?'':'none';
   });
-  // Show Jinja footer only when all selected; otherwise recalc
-  const showAll = selectedAdvisers.size===allAdvisers.length;
-  ['team-total-row','checks-total-row'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display=showAll?'':'none';
-  });
+  recalcPerfFooter();
+  recalcChecksFooter();
+}
+
+function recalcPerfFooter(){
+  const tfoot=document.getElementById('team-total-row');
+  if(!tfoot) return;
+  const vis=[...document.querySelectorAll('#perf-tbody .adviser-row')].filter(r=>r.style.display!=='none');
+  const n=vis.length;
+  if(!n){tfoot.style.display='none';return;}
+  tfoot.style.display='';
+  const sum=k=>vis.reduce((s,r)=>s+(parseFloat(r.dataset[k])||0),0);
+  const days=sum('days'),asgn=sum('assigned'),talkS=sum('talkS'),talkPdS=sum('talkPdS');
+  const quotes=sum('quotes'),quoteVal=sum('quoteVal'),apps=sum('apps'),appsVal=sum('appsVal');
+  const infCount=sum('infCount'),infVal=sum('inf'),remP=sum('remedPending'),remT=sum('remedTotal');
+  const avgTalkPd=talkPdS/n, avgQpd=sum('qpd')/n, avgApd=sum('apd')/n;
+  const quoteAvg=quotes?quoteVal/quotes:0, appsAvg=apps?appsVal/apps:0, q2a=quotes?apps/quotes*100:0;
+  const fHMS=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=Math.floor(s%60);return h+':'+String(m).padStart(2,'0')+':'+String(sc).padStart(2,'0');};
+  const fHM=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h+':'+String(m).padStart(2,'0');};
+  const fD=v=>'$'+v.toLocaleString('en-AU',{maximumFractionDigits:0});
+  const c=tfoot.querySelectorAll('tr td');
+  c[0].textContent='Team Total';c[1].textContent=days;c[2].textContent=asgn;
+  c[3].textContent=talkS?fHMS(talkS):'—';c[4].textContent=fHM(avgTalkPd);
+  c[5].textContent=quotes;c[6].textContent=fD(quoteVal);c[7].textContent=fD(quoteAvg);c[8].textContent=avgQpd.toFixed(1);
+  c[9].textContent=apps;c[10].textContent=fD(appsVal);c[11].textContent=fD(appsAvg);c[12].textContent=avgApd.toFixed(1);
+  c[13].textContent=q2a.toFixed(1)+'%';c[14].textContent=infCount;c[15].textContent=fD(infVal);
+  c[16].textContent=remP;c[17].textContent=remT;
+  tfoot.dataset.talkMins=Math.floor(avgTalkPd/60);
+  tfoot.dataset.qpd=avgQpd.toFixed(1);tfoot.dataset.apd=avgApd.toFixed(1);tfoot.dataset.inf=infVal;
+}
+
+function recalcChecksFooter(){
+  const tfoot=document.getElementById('checks-total-row');
+  if(!tfoot) return;
+  const vis=[...document.querySelectorAll('#checks-tbody .adviser-row')].filter(r=>r.style.display!=='none');
+  const n=vis.length;
+  if(!n){tfoot.style.display='none';return;}
+  tfoot.style.display='';
+  const sum=k=>vis.reduce((s,r)=>s+(parseFloat(r.dataset[k])||0),0);
+  const asgn=sum('assigned'),cont=sum('contacted'),nc=sum('nc'),bkd=sum('booked');
+  const q=sum('quotes'),ac=sum('apps'),av=sum('appsVal'),ic=sum('infCount'),iv=sum('infVal');
+  const td=sum('td'),tf=sum('tf'),tq=sum('tq'),fd=sum('fd'),ff=sum('ff'),fq=sum('fq');
+  const fD=v=>'$'+v.toLocaleString('en-AU',{maximumFractionDigits:0});
+  const c=tfoot.querySelectorAll('tr td');
+  c[0].textContent='Team Total';c[1].textContent=asgn;c[2].textContent=cont;c[3].textContent=nc;c[4].textContent=bkd;
+  c[5].textContent=q;c[6].textContent=ac;c[7].textContent=fD(av);c[8].textContent=ic;c[9].textContent=fD(iv);
+  c[10].textContent=(asgn?(cont/asgn*100).toFixed(1):'0.0')+'%';
+  c[11].textContent=(cont?(bkd/cont*100).toFixed(1):'0.0')+'%';
+  c[12].textContent=(asgn?(bkd/asgn*100).toFixed(1):'0.0')+'%';
+  c[13].textContent=td;c[14].textContent=tf;c[15].textContent=tq;
+  c[16].textContent=fd;c[17].textContent=ff;c[18].textContent=fq;
 }
 filterRows();
 
@@ -1090,6 +1200,47 @@ function openTargets(){
 }
 function closeTargets(){document.getElementById('targets-modal').classList.remove('open');}
 function closeTargetsOutside(e){if(e.target===document.getElementById('targets-modal'))closeTargets();}
+
+// ── Remediation popup ──
+const REMED_STATUS={0:'Pending',1:'In Progress',2:'Completed'};
+const REMED_CLS={0:'remed-status-pending',1:'remed-status-inprogress'};
+function openRemed(uid){
+  const items=remedDetails[uid]||[];
+  const advName=allAdvisers.find(a=>a.uid===uid)?.name||'Adviser';
+  document.getElementById('remed-modal-title').textContent='Pending Remediations — '+advName;
+  document.getElementById('remed-modal-sub').textContent=items.length+' item'+(items.length!==1?'s':'');
+  const tbody=document.getElementById('remed-modal-tbody');
+  const empty=document.getElementById('remed-modal-empty');
+  if(!items.length){tbody.innerHTML='';empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    tbody.innerHTML=items.map(it=>{
+      const stLbl=REMED_STATUS[it.status]||'Unknown';
+      const stCls=REMED_CLS[it.status]||'';
+      const clientLink=`<a class="remed-link" href="${CRM_BASE}/leads/${it.lead_id}/" target="_blank">${it.client_name||'Client #'+it.lead_id}</a>`;
+      let appCell='—';
+      if(it.app_id) appCell=`<a class="remed-link" href="${CRM_BASE}/applications/${it.app_id}/" target="_blank">#${it.app_id}</a>`;
+      const detail=it.description||it.last_note||'—';
+      const detailShort=detail.length>200?detail.substring(0,200)+'…':detail;
+      return `<tr>
+        <td style="white-space:nowrap">${it.created_date}</td>
+        <td><span class="remed-status ${stCls}">${stLbl}</span></td>
+        <td>${appCell}</td>
+        <td>${clientLink}</td>
+        <td style="white-space:nowrap">${it.task_name}</td>
+        <td title="${detail.replace(/"/g,'&quot;')}">${detailShort}</td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('remed-modal').classList.add('open');
+}
+function closeRemed(){document.getElementById('remed-modal').classList.remove('open');}
+function closeRemedOutside(e){if(e.target===document.getElementById('remed-modal'))closeRemed();}
+document.addEventListener('click',function(e){
+  const link=e.target.closest('.remed-pending-link');
+  if(link){e.preventDefault();openRemed(parseInt(link.dataset.uid));}
+});
+
 function resetTargets(){
   T={...DEFAULTS};
   fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
