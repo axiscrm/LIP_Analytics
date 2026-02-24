@@ -1104,7 +1104,8 @@ function openTargets(){
   ['talk','q','a','inf'].forEach(k=>{
     document.getElementById(`t-${k}-line-color`).value=T[`${k}LineColor`];
     document.getElementById(`t-${k}-tgt-color`).value=T[`${k}TgtColor`];
-    document.getElementById(`t-${k}-avg-color`).value=T.avgLineColor;
+    const avgEl=document.getElementById(`t-${k}-avg-color`);
+    if(avgEl) avgEl.value=T.avgLineColor;
     previewTgtColor(`${k}-line`,T[`${k}LineColor`]);
     previewTgtColor(`${k}-tgt`,T[`${k}TgtColor`]);
     previewTgtColor(`${k}-avg`,T.avgLineColor);

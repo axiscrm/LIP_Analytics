@@ -837,10 +837,10 @@ def index():
     team_avgs = {"talk_mins": round(avg_talk_s/60, 2), "talk_fmt": avg_talk_hm,
                  "qpd": round(avg_qpd, 2), "apd": round(avg_apd, 2)}
 
-    # Parse multi-select adviser param
-    selected_adviser_raw = request.args.get("adviser","team")
-    if selected_adviser_raw == "team":
-        selected_advisers = []
+    # Parse multi-select adviser param (default excludes Lucas 53)
+    selected_adviser_raw = request.args.get("adviser", "")
+    if not selected_adviser_raw or selected_adviser_raw == "team":
+        selected_advisers = [str(uid) for uid in sorted(SHOW_USER_IDS) if uid != 53]
     else:
         selected_advisers = [s.strip() for s in selected_adviser_raw.split(",") if s.strip()]
 
