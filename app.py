@@ -679,7 +679,11 @@ LEAD_STATUS_CLOSED = {4, 5}          # "Closed" tab
 
 
 def get_assigned_lead_details(cursor, start, end):
-    """All leads assigned in the period, per adviser — for the slide-in panel."""
+    """All leads assigned in the period, per adviser — for the slide-in panel.
+
+    Returns user_note (last human-written note) and system_note (last auto-generated)
+    separately so the panel can display them in two accordions.
+    """
     cursor.execute("""
         SELECT l.id          AS lead_id,
                l.user_id     AS adviser_id,
@@ -687,7 +691,14 @@ def get_assigned_lead_details(cursor, start, end):
                l.status,
                l.source_code,
                DATE(l.assigned)                      AS assigned_date,
-               LEFT(l.last_note, 500)                AS last_note
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND la.action_type = 'note' AND la.user_id IS NOT NULL
+                ORDER BY la.created DESC LIMIT 1) AS user_note,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND (la.action_type != 'note' OR la.user_id IS NULL)
+                ORDER BY la.created DESC LIMIT 1) AS system_note
         FROM leads_lead l
         WHERE l.assigned >= %s AND l.assigned < %s
           AND l.user_id IN ({uids})
@@ -703,9 +714,84 @@ def get_assigned_lead_details(cursor, start, end):
             "status": int(r["status"]),
             "source": (r["source_code"] or "").strip(),
             "assigned_date": str(r["assigned_date"]),
-            "last_note": (r["last_note"] or "").strip(),
+            "user_note": (r["user_note"] or "").strip(),
+            "system_note": (r["system_note"] or "").strip(),
         })
     return dict(details)
+
+
+def get_contact_before_close(cursor, start, end):
+    """Count 45s+ calls on closed leads (Won/Lost) per adviser.
+
+    Joins leads → user extension → noojee call records matching the lead's
+    phone number, filtering for calls with duration >= 45 seconds.
+    """
+    cursor.execute(f"""
+        SELECT l.user_id,
+               COUNT(*) AS cbc
+        FROM leads_lead l
+        INNER JOIN account_userprofile up ON up.user_id = l.user_id
+        INNER JOIN noojee_callrecord ncr
+            ON ncr.extension = up.extension
+            AND ncr.phone = REPLACE(REPLACE(l.phone, ' ', ''), '-', '')
+        WHERE l.user_id IN ({_USER_IDS_SQL})
+          AND l.status IN (4, 5)
+          AND l.assigned >= %s AND l.assigned < %s
+          AND ncr.duration >= {CONTACT_THRESHOLD_US}
+          AND ncr.status = 'Hungup'
+        GROUP BY l.user_id
+    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
+    return {r["user_id"]: int(r["cbc"]) for r in cursor.fetchall()}
+
+
+# User IDs that represent "team" / unassigned accounts (not real advisers)
+UNASSIGNED_USER_IDS = {172, 117, 118, 78, 88}  # Advice_Team, LIP Support, SLG Support, Adviser TBC, SLG Test
+_UNASSIGNED_IDS_SQL = ",".join(str(u) for u in sorted(UNASSIGNED_USER_IDS))
+
+
+def get_unassigned_leads(cursor):
+    """Leads currently assigned to team/support accounts that should be with a real adviser."""
+    cursor.execute(f"""
+        SELECT l.id          AS lead_id,
+               l.user_id     AS current_uid,
+               CONCAT(u.first_name,' ',u.last_name) AS current_user_name,
+               CONCAT(l.first_name,' ',l.last_name) AS client_name,
+               l.status,
+               l.source_code,
+               DATE(l.assigned) AS assigned_date,
+               l.admin_id,
+               (SELECT CONCAT(au.first_name,' ',au.last_name)
+                FROM auth_user au WHERE au.id = l.admin_id) AS admin_name,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND la.action_type = 'note' AND la.user_id IS NOT NULL
+                ORDER BY la.created DESC LIMIT 1) AS user_note,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND (la.action_type != 'note' OR la.user_id IS NULL)
+                ORDER BY la.created DESC LIMIT 1) AS system_note
+        FROM leads_lead l
+        JOIN auth_user u ON u.id = l.user_id
+        WHERE l.user_id IN ({_UNASSIGNED_IDS_SQL})
+          AND l.status IN (0, 1, 2, 3)
+        ORDER BY l.assigned ASC
+    """)
+    leads = []
+    for r in cursor.fetchall():
+        leads.append({
+            "lead_id": r["lead_id"],
+            "current_uid": r["current_uid"],
+            "current_user": (r["current_user_name"] or "").strip(),
+            "client_name": (r["client_name"] or "").strip(),
+            "status": int(r["status"]),
+            "source": (r["source_code"] or "").strip(),
+            "assigned_date": str(r["assigned_date"]),
+            "admin_id": r["admin_id"],
+            "admin_name": (r["admin_name"] or "").strip() if r["admin_name"] else "",
+            "user_note": (r["user_note"] or "").strip(),
+            "system_note": (r["system_note"] or "").strip(),
+        })
+    return leads
 
 
 @app.route("/")
@@ -815,6 +901,8 @@ def index():
         appt_today, appt_future = _timed("appointments", get_schedule_appointments, cursor, today)
         remed_counts, remed_details = _timed("remediations", get_remediation_stats, cursor, start, end)
         assigned_details = _timed("assigned_details", get_assigned_lead_details, cursor, start, end)
+        cbc_counts = _timed("contact_before_close", get_contact_before_close, cursor, start, end)
+        unassigned_leads = _timed("unassigned_leads", get_unassigned_leads, cursor)
     finally:
         cursor.close(); conn.close()
 
@@ -890,6 +978,7 @@ def index():
             "booked":booked,
             "quotes_count":quotes_count,"apps_count":apps_count,"apps_value":apps_value,
             "inforce_count":inforce_count,"inforce_value":inforce_value,
+            "cbc": cbc_counts.get(uid, 0),
             "conv_ac":conv_ac,"conv_cb":conv_cb,"conv_ab":conv_ab,
             "today_disc":_at.get("disc",0),"today_fu":_at.get("fu",0),"today_q":_at.get("q",0),
             "future_disc":_af.get("disc",0),"future_fu":_af.get("fu",0),"future_q":_af.get("q",0),
@@ -976,7 +1065,46 @@ def index():
         assigned_details=assigned_details,
         lead_status=LEAD_STATUS,
         crm_base_url=CRM_BASE_URL,
+        unassigned_leads=unassigned_leads,
     )
+
+
+@app.route("/api/assign-lead", methods=["POST"])
+@login_required
+def assign_lead():
+    """Reassign a lead to a different adviser and/or admin."""
+    from flask import jsonify
+    data = request.get_json(force=True) or {}
+    lead_id = data.get("lead_id")
+    adviser_id = data.get("adviser_id")
+    admin_id = data.get("admin_id")
+    if not lead_id:
+        return jsonify({"ok": False, "error": "lead_id required"}), 400
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor(dictionary=True)
+        updates, params = [], []
+        if adviser_id is not None:
+            updates.append("user_id = %s")
+            params.append(int(adviser_id))
+        if admin_id is not None:
+            updates.append("admin_id = %s")
+            params.append(int(admin_id))
+        if not updates:
+            return jsonify({"ok": False, "error": "Nothing to update"}), 400
+        params.append(int(lead_id))
+        cur.execute(f"UPDATE leads_lead SET {', '.join(updates)} WHERE id = %s", params)
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        if conn:
+            try: conn.close()
+            except: pass
+        log.error("[assign_lead] %s", e)
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.errorhandler(500)
