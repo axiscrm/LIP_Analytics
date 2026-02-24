@@ -628,8 +628,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         </div>
         <div class="tgt-row-bottom">
           <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-inf-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-inf" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="inf-line-color-preview"><input type="color" id="t-inf-line-color" oninput="previewTgtColor('inf-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="inf-tgt-color-preview"><input type="color" id="t-inf-tgt-color" oninput="previewTgtColor('inf-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="inf-avg-color-preview"><input type="color" id="t-inf-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
+          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="inf-line-color-preview"><input type="color" id="t-inf-line-color" oninput="previewTgtColor('inf-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="inf-tgt-color-preview"><input type="color" id="t-inf-tgt-color" oninput="previewTgtColor('inf-tgt',this.value)"></div></div>
         </div>
       </div>
 
@@ -669,6 +668,12 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       <!-- BELOW TARGET -->
       <div class="thr-block">
         <div class="thr-header"><div class="thr-label"><span class="beacon beacon-below" style="animation:none"></span>Below target</div></div>
+        <div class="thr-inputs-row">
+          <div class="thr-field-narrow"><label>Talk ≥ (mins)</label><input type="number" id="thr-talk-below" min="0" step="5"></div>
+          <div class="thr-field-narrow"><label>Quotes/Day ≥</label><input type="number" id="thr-q-below" min="0" step="1"></div>
+          <div class="thr-field-narrow"><label>Apps/Day ≥</label><input type="number" id="thr-a-below" min="0" step="0.5"></div>
+          <div class="thr-field-narrow"><label>Inforce $ ≥</label><input type="number" id="thr-inf-below" min="0" step="1000"></div>
+        </div>
         <div class="thr-bottom-row">
           <div class="thr-color-wrap"><div class="color-preview" id="below-color-preview"><input type="color" id="thr-below-color" oninput="previewColor('below',this.value)"></div><span id="below-color-hex" style="font-size:11px;color:var(--g500);font-family:monospace"></span></div>
           <div class="thr-enabled-row"><label class="toggle"><input type="checkbox" id="thr-below-enabled"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Enabled</span></div>
@@ -736,10 +741,10 @@ const QF = {
 const DEFAULTS={
   talkTgt:150,showTalkTgt:true,qTgt:6,showQTgt:true,aTgt:2,showATgt:true,
   infTgts:{181:20000,182:20000,183:20000,152:20000,53:20000},showInfTgt:true,
-  showAvgTalk:true,showAvgQ:true,showAvgA:true,showAvgInf:true,avgLineColor:'#7f56d9',
+  showAvgTalk:true,showAvgQ:true,showAvgA:true,avgLineColor:'#7f56d9',
   talkLineColor:'#7f56d9',qLineColor:'#7f56d9',aLineColor:'#7f56d9',infLineColor:'#7f56d9',
   talkTgtColor:'#12B76A',qTgtColor:'#12B76A',aTgtColor:'#12B76A',infTgtColor:'#12B76A',
-  talkOn:150,talkNear:120,qOn:6,qNear:4,aOn:2,aNear:1,infOn:20000,infNear:15000,
+  talkOn:150,talkNear:120,talkBelow:0,qOn:6,qNear:4,qBelow:0,aOn:2,aNear:1,aBelow:0,infOn:20000,infNear:15000,infBelow:0,
   onColor:'#12B76A',onEnabled:true,nearColor:'#EAB308',nearEnabled:true,belowColor:'#B42318',belowEnabled:true,
 };
 // ── Settings: load from server on page load, fall back to DEFAULTS ──
@@ -925,11 +930,12 @@ function posTip(icon){
 
 // ── Badge refresh ──
 function badgeClass(metric,value){
-  const onV ={talk:T.talkOn,qpd:T.qOn,apd:T.aOn,inf:T.infOn*MONTHS}[metric];
-  const nearV={talk:T.talkNear,qpd:T.qNear,apd:T.aNear,inf:T.infNear*MONTHS}[metric];
-  if(T.onEnabled   &&value>=onV)  return 'badge badge-on';
-  if(T.nearEnabled &&value>=nearV)return 'badge badge-near';
-  if(T.belowEnabled)              return 'badge badge-below';
+  const onV   ={talk:T.talkOn,qpd:T.qOn,apd:T.aOn,inf:T.infOn*MONTHS}[metric];
+  const nearV ={talk:T.talkNear,qpd:T.qNear,apd:T.aNear,inf:T.infNear*MONTHS}[metric];
+  const belowV={talk:T.talkBelow,qpd:T.qBelow,apd:T.aBelow,inf:T.infBelow*MONTHS}[metric];
+  if(T.onEnabled   &&value>=onV)   return 'badge badge-on';
+  if(T.nearEnabled &&value>=nearV) return 'badge badge-near';
+  if(T.belowEnabled&&value>=belowV)return 'badge badge-below';
   return 'badge badge-neutral';
 }
 function refreshBadges(){
@@ -1061,7 +1067,7 @@ function rebuildCharts(){
   buildLine('chart-perf-apps',cumAppsVal,ps.name,fmtMoney,null,false,T.aLineColor);
   const el1=document.getElementById('kpi-perf-apps');if(el1)el1.textContent=fmtMoney(totApps);
 
-  buildLine('chart-perf-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor,totInf,T.avgLineColor,T.showAvgInf);
+  buildLine('chart-perf-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor);
   const el2=document.getElementById('kpi-perf-inf');if(el2)el2.textContent=fmtMoney(totInf);
   setBeacon('beacon-perf-inf',totInf,infScaledTgt,infScaledTgt*0.75);
 
@@ -1069,7 +1075,7 @@ function rebuildCharts(){
   buildLine('chart-checks-apps',cumAppsVal,ps.name,fmtMoney,null,false,T.aLineColor);
   const el3=document.getElementById('kpi-checks-apps');if(el3)el3.textContent=fmtMoney(totApps);
 
-  buildLine('chart-checks-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor,totInf,T.avgLineColor,T.showAvgInf);
+  buildLine('chart-checks-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor);
   const el4=document.getElementById('kpi-checks-inf');if(el4)el4.textContent=fmtMoney(totInf);
 
   refreshBadges();
@@ -1094,7 +1100,6 @@ function openTargets(){
   document.getElementById('t-show-avg').checked=T.showAvgTalk;
   document.getElementById('t-show-avg-q').checked=T.showAvgQ;
   document.getElementById('t-show-avg-a').checked=T.showAvgA;
-  document.getElementById('t-show-avg-inf').checked=T.showAvgInf;
   document.getElementById('inf-tgt-hint').textContent=`Team target = sum of individual targets`;
   ['talk','q','a','inf'].forEach(k=>{
     document.getElementById(`t-${k}-line-color`).value=T[`${k}LineColor`];
@@ -1118,6 +1123,10 @@ function openTargets(){
   document.getElementById('thr-a-near').value=T.aNear;
   document.getElementById('thr-inf-on').value=T.infOn;
   document.getElementById('thr-inf-near').value=T.infNear;
+  document.getElementById('thr-talk-below').value=T.talkBelow;
+  document.getElementById('thr-q-below').value=T.qBelow;
+  document.getElementById('thr-a-below').value=T.aBelow;
+  document.getElementById('thr-inf-below').value=T.infBelow;
   ['on','near','below'].forEach(k=>previewColor(k,T[k+'Color']));
   document.getElementById('targets-modal').classList.add('open');
 }
@@ -1148,7 +1157,7 @@ function saveTargets(){
     aTgt:fv('t-a-tgt',2),showATgt:bv('t-a-tgt-show'),
     infTgts:Object.fromEntries(allAdvisers.map(a=>[a.uid,parseFloat(document.getElementById('t-inf-tgt-'+a.uid)?.value)||20000])),
     showInfTgt:bv('t-inf-tgt-show'),
-    showAvgTalk:bv('t-show-avg'),showAvgQ:bv('t-show-avg-q'),showAvgA:bv('t-show-avg-a'),showAvgInf:bv('t-show-avg-inf'),
+    showAvgTalk:bv('t-show-avg'),showAvgQ:bv('t-show-avg-q'),showAvgA:bv('t-show-avg-a'),
     avgLineColor:g('t-talk-avg-color').value,
     talkLineColor:g('t-talk-line-color').value,talkTgtColor:g('t-talk-tgt-color').value,
     qLineColor:g('t-q-line-color').value,qTgtColor:g('t-q-tgt-color').value,
@@ -1157,10 +1166,10 @@ function saveTargets(){
     onColor:g('thr-on-color').value,onEnabled:bv('thr-on-enabled'),
     nearColor:g('thr-near-color').value,nearEnabled:bv('thr-near-enabled'),
     belowColor:g('thr-below-color').value,belowEnabled:bv('thr-below-enabled'),
-    talkOn:fv('thr-talk-on',150),talkNear:fv('thr-talk-near',120),
-    qOn:fv('thr-q-on',6),qNear:fv('thr-q-near',4),
-    aOn:fv('thr-a-on',2),aNear:fv('thr-a-near',1),
-    infOn:fv('thr-inf-on',20000),infNear:fv('thr-inf-near',15000),
+    talkOn:fv('thr-talk-on',150),talkNear:fv('thr-talk-near',120),talkBelow:fv('thr-talk-below',0),
+    qOn:fv('thr-q-on',6),qNear:fv('thr-q-near',4),qBelow:fv('thr-q-below',0),
+    aOn:fv('thr-a-on',2),aNear:fv('thr-a-near',1),aBelow:fv('thr-a-below',0),
+    infOn:fv('thr-inf-on',20000),infNear:fv('thr-inf-near',15000),infBelow:fv('thr-inf-below',0),
   };
   fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(T)});
   closeTargets();rebuildCharts();

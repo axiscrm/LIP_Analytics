@@ -657,7 +657,8 @@ def index():
         log.warning("[db_init] %s", _e)
     # ────────────────────────────────────────────────────────────────────────
 
-    default_end   = lbd
+    # Default view = M0 (month-to-date)
+    default_end   = today
     default_start = max(today.replace(day=1), min_date_obj)
     if default_start > default_end:
         default_start = max(default_end-timedelta(days=20), min_date_obj)
