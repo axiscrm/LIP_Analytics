@@ -81,7 +81,7 @@ def post_settings():
     return jsonify({"ok": True})
 
 SHOW_USER_IDS = {181, 182, 183, 152}
-MIN_DATE = "2026-01-01"
+MIN_DATE = "2025-01-01"
 TZ_OFFSET = "+11:00"   # AEDT — single place to change if needed
 
 AVATAR_COLORS = {181:"#6366f1",182:"#ec4899",152:"#f59e0b",183:"#10b981"}
@@ -311,6 +311,154 @@ def get_schedule_appointments(cursor, today_dt):
     return dict(appt_today), dict(appt_future)
 
 
+def get_hourly_series(cursor, day):
+    """Hourly performance series for a single day (6am–10pm AEDT)."""
+    HOURS = list(range(6, 23))  # 6..22
+    day_iso = day.isoformat()
+    next_day_iso = (day + timedelta(days=1)).isoformat()
+    utc_start = f"CONVERT_TZ('{day_iso}','{TZ_OFFSET}','+00:00')"
+    utc_end   = f"CONVERT_TZ('{next_day_iso}','{TZ_OFFSET}','+00:00')"
+
+    # Talk time per hour from noojee_callrecord
+    cursor.execute(f"""
+        SELECT HOUR(CONVERT_TZ(ncr.created,'+00:00','{TZ_OFFSET}')) AS hr,
+               up.user_id,
+               SUM(ncr.duration)/1000000 AS talk_secs
+        FROM noojee_callrecord ncr
+        JOIN account_userprofile up ON up.extension = ncr.extension
+        WHERE up.user_id IN (181,182,183,152)
+          AND ncr.status = 'Hungup'
+          AND ncr.duration > 10000000
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
+        GROUP BY hr, up.user_id
+    """)
+    talk_hour = defaultdict(lambda: defaultdict(float))
+    for r in cursor.fetchall():
+        talk_hour[r["user_id"]][int(r["hr"])] = float(r["talk_secs"] or 0)
+
+    # Quotes per hour from leads_leadquote
+    cursor.execute(f"""
+        SELECT HOUR(CONVERT_TZ(lq.created,'+00:00','{TZ_OFFSET}')) AS hr,
+               lq.user_id, COUNT(*) AS cnt
+        FROM leads_leadquote lq
+        JOIN (
+            SELECT user_id, lead_id, MAX(created) AS max_created
+            FROM leads_leadquote
+            WHERE sent=1 AND deleted=0
+              AND created >= {utc_start}
+              AND created < {utc_end}
+            GROUP BY user_id, lead_id
+        ) latest ON lq.user_id=latest.user_id AND lq.lead_id=latest.lead_id
+                AND lq.created=latest.max_created
+        WHERE lq.sent=1 AND lq.deleted=0
+        GROUP BY hr, lq.user_id
+    """)
+    quotes_hour = defaultdict(lambda: defaultdict(int))
+    for r in cursor.fetchall():
+        quotes_hour[r["user_id"]][int(r["hr"])] = int(r["cnt"])
+
+    # Contacted (calls >= 5s) per hour
+    cursor.execute(f"""
+        SELECT HOUR(CONVERT_TZ(ncr.created,'+00:00','{TZ_OFFSET}')) AS hr,
+               up.user_id, COUNT(*) AS cnt
+        FROM noojee_callrecord ncr
+        JOIN account_userprofile up ON up.extension = ncr.extension
+        WHERE up.user_id IN (181,182,183,152)
+          AND ncr.duration >= 5000000
+          AND ncr.status = 'Hungup'
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
+        GROUP BY hr, up.user_id
+    """)
+    calls_hour = defaultdict(lambda: defaultdict(int))
+    for r in cursor.fetchall():
+        calls_hour[r["user_id"]][int(r["hr"])] = int(r["cnt"] or 0)
+
+    # Build series per user keyed by hour strings
+    hours_list = [str(h) for h in HOURS]
+    user_hour = defaultdict(dict)
+    for uid in SHOW_USER_IDS:
+        for h in HOURS:
+            hs = str(h)
+            user_hour[uid][hs] = {
+                "talk_time_seconds": talk_hour[uid].get(h, 0),
+                "leads_quoted": quotes_hour[uid].get(h, 0),
+                "apps_count": 0,
+                "apps_value": 0,
+                "inforce_count": 0,
+                "inforce_value": 0,
+            }
+
+    calls_day_hourly = defaultdict(dict)
+    for uid in SHOW_USER_IDS:
+        for h in HOURS:
+            calls_day_hourly[uid][str(h)] = calls_hour[uid].get(h, 0)
+
+    return hours_list, dict(user_hour), dict(calls_day_hourly)
+
+
+def get_hourly_pipeline_series(cursor, day):
+    """Hourly pipeline series for a single day (6am–10pm AEDT)."""
+    HOURS = list(range(6, 23))
+    day_iso = day.isoformat()
+    next_day_iso = (day + timedelta(days=1)).isoformat()
+    utc_start = f"CONVERT_TZ('{day_iso}','{TZ_OFFSET}','+00:00')"
+    utc_end   = f"CONVERT_TZ('{next_day_iso}','{TZ_OFFSET}','+00:00')"
+
+    # Assigned per hour
+    cursor.execute("""
+        SELECT user_id, HOUR(assigned) AS hr, COUNT(*) AS cnt
+        FROM leads_lead
+        WHERE assigned >= %s AND assigned < %s
+        GROUP BY user_id, HOUR(assigned)
+    """, (day_iso, next_day_iso))
+    assigned_h = defaultdict(lambda: defaultdict(int))
+    for r in cursor.fetchall(): assigned_h[r["user_id"]][int(r["hr"])] = int(r["cnt"])
+
+    # Contacted per hour (calls >= 5s)
+    cursor.execute(f"""
+        SELECT HOUR(CONVERT_TZ(ncr.created,'+00:00','{TZ_OFFSET}')) AS hr,
+               up.user_id, COUNT(*) AS cnt
+        FROM noojee_callrecord ncr
+        JOIN account_userprofile up ON up.extension = ncr.extension
+        WHERE up.user_id IN (181,182,183,152)
+          AND ncr.duration >= 5000000
+          AND ncr.status = 'Hungup'
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
+        GROUP BY hr, up.user_id
+    """)
+    contacted_h = defaultdict(lambda: defaultdict(int))
+    for r in cursor.fetchall(): contacted_h[r["user_id"]][int(r["hr"])] = int(r["cnt"] or 0)
+
+    # No Contact per hour (calls < 5s)
+    cursor.execute(f"""
+        SELECT HOUR(CONVERT_TZ(ncr.created,'+00:00','{TZ_OFFSET}')) AS hr,
+               up.user_id, COUNT(*) AS cnt
+        FROM noojee_callrecord ncr
+        JOIN account_userprofile up ON up.extension = ncr.extension
+        WHERE up.user_id IN (181,182,183,152)
+          AND ncr.duration < 5000000
+          AND ncr.status = 'Hungup'
+          AND ncr.created >= {utc_start}
+          AND ncr.created < {utc_end}
+        GROUP BY hr, up.user_id
+    """)
+    no_contact_h = defaultdict(lambda: defaultdict(int))
+    for r in cursor.fetchall(): no_contact_h[r["user_id"]][int(r["hr"])] = int(r["cnt"] or 0)
+
+    hours_list = [str(h) for h in HOURS]
+    assigned_d, contacted_d, no_contact_d, booked_d = {}, {}, {}, {}
+    for uid in SHOW_USER_IDS:
+        assigned_d[uid]   = {str(h): assigned_h[uid].get(h, 0) for h in HOURS}
+        contacted_d[uid]  = {str(h): contacted_h[uid].get(h, 0) for h in HOURS}
+        no_contact_d[uid] = {str(h): no_contact_h[uid].get(h, 0) for h in HOURS}
+        booked_d[uid]     = {str(h): 0 for h in HOURS}
+
+    return assigned_d, contacted_d, no_contact_d, booked_d
+
+
 def get_daily_series(cursor, start, end):
     """Performance + call-contact daily series per adviser."""
     utc_start, utc_end = _utc_range(start, end)
@@ -515,9 +663,9 @@ def index():
 
     start=max(start,min_date_obj); end=max(end,min_date_obj)
     if start>end: start,end=end,start
-    # Hard cap — never allow end beyond last business day to prevent pool exhaustion
-    if end > lbd: end = lbd
-    if start > lbd: start = lbd
+    # Hard cap — never allow end beyond today to prevent pool exhaustion
+    if end > today: end = today
+    if start > today: start = today
 
     log.info("Dashboard request: %s to %s", start, end)
 
@@ -528,17 +676,45 @@ def index():
     except Exception as e:
         return render_template("error.html", error_msg=str(e)), 503
 
+    is_single_day = (start == end)
+
     cursor=conn.cursor(dictionary=True)
     try:
         advisers       = _timed("advisers",    get_advisers, cursor)
         perf           = _timed("perf_stats",  get_performance_stats, cursor, start, end)
         pipeline       = _timed("pipeline",    get_pipeline_stats, cursor, start, end)
         biz_days       = biz_days_in_range(start, end)
-        dates_list, daily_by_user, calls_day = _timed("daily_series", get_daily_series, cursor, start, end)
+        if is_single_day:
+            dates_list, daily_by_user, calls_day = _timed("hourly_series", get_hourly_series, cursor, start)
+            assigned_d, contacted_d, no_contact_d, booked_d = _timed("hourly_pipeline", get_hourly_pipeline_series, cursor, start)
+        else:
+            dates_list, daily_by_user, calls_day = _timed("daily_series", get_daily_series, cursor, start, end)
+            # Ensure ALL calendar dates are in dates_list (not just dates with data)
+            all_dates = [(start + timedelta(days=i)).isoformat() for i in range((end - start).days + 1)]
+            dates_list = sorted(set(dates_list) | set(all_dates))
+            assigned_d, contacted_d, no_contact_d, booked_d = _timed("daily_pipeline", get_daily_pipeline_series, cursor, start, end, dates_list)
+
+        # For weekly mode keep all 7 days (Sun-Sat); for daily/monthly strip weekends
+        if not is_single_day:
+            span = (end - start).days
+            days_since_sun = (start.weekday() + 1) % 7
+            is_weekly = span <= 6 and days_since_sun == 0
+            if not is_weekly:
+                dates_list = [d for d in dates_list if date.fromisoformat(d).weekday() < 5]
         appt_today, appt_future = _timed("appointments", get_schedule_appointments, cursor, today)
-        assigned_d, contacted_d, no_contact_d, booked_d = _timed("daily_pipeline", get_daily_pipeline_series, cursor, start, end, dates_list)
     finally:
         cursor.close(); conn.close()
+
+    # Determine chart axis mode
+    if is_single_day:
+        chart_mode = "hourly"
+    else:
+        span = (end - start).days
+        days_since_sun = (start.weekday() + 1) % 7
+        if span <= 6 and days_since_sun == 0:  # starts on Sunday, ≤7 days
+            chart_mode = "weekly"
+        else:
+            chart_mode = "daily"
 
     months=biz_days/20 if biz_days else 1
     perf_rows,pipeline_rows,daily_rows=[],[],[]
@@ -637,12 +813,23 @@ def index():
             "booked":     [booked_d.get(uid,{}).get(d,0)   for d in dates_list],
         })
 
-    mon_this_week = today - timedelta(days=today.weekday())
-    wtd_start = max(mon_this_week, min_date_obj)
-    # On Monday, WTD would be a single day (today, no data yet) — show prev week instead
-    if wtd_start >= lbd:
-        wtd_start = lbd - timedelta(days=4)  # Mon of previous week = last 5 biz days
-    mtd_start = max(today.replace(day=1), min_date_obj)
+    # ── Quick-filter presets (D0, D1, W0, W1, M0, M1) ────────────────────
+    # D0 = today, D1 = yesterday
+    d0_start = today;           d0_end = today
+    d1_start = today - timedelta(days=1); d1_end = d1_start
+
+    # W0 = week-to-date (Sunday–Saturday), W1 = prior full week
+    days_since_sun = (today.weekday() + 1) % 7   # Sun=0 … Sat=6
+    w0_start = max(today - timedelta(days=days_since_sun), min_date_obj)
+    w0_end   = today
+    w1_end   = w0_start - timedelta(days=1)       # Saturday before current week
+    w1_start = max(w1_end - timedelta(days=6), min_date_obj)  # Sunday of prior week
+
+    # M0 = month-to-date, M1 = prior full month
+    m0_start = max(today.replace(day=1), min_date_obj)
+    m0_end   = today
+    m1_end   = m0_start - timedelta(days=1)       # last day of previous month
+    m1_start = max(m1_end.replace(day=1), min_date_obj)
 
     # Pre-compute team averages matching the tfoot row exactly
     n_adv = len(perf_rows)
@@ -669,9 +856,15 @@ def index():
         pipeline_chart_advisers=pipeline_chart_advisers,
         selected_adviser=selected_adviser, active_tab=active_tab,
         last_refresh=data_updated_str,
-        prev_wd=lbd.isoformat(), wtd_start=wtd_start.isoformat(),
-        mtd_start=mtd_start.isoformat(), lbd=lbd.isoformat(),
+        lbd=lbd.isoformat(), today_iso=today.isoformat(),
+        d0_start=d0_start.isoformat(), d0_end=d0_end.isoformat(),
+        d1_start=d1_start.isoformat(), d1_end=d1_end.isoformat(),
+        w0_start=w0_start.isoformat(), w0_end=w0_end.isoformat(),
+        w1_start=w1_start.isoformat(), w1_end=w1_end.isoformat(),
+        m0_start=m0_start.isoformat(), m0_end=m0_end.isoformat(),
+        m1_start=m1_start.isoformat(), m1_end=m1_end.isoformat(),
         team_avgs=team_avgs,
+        chart_mode=chart_mode,
     )
 
 
