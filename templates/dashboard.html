@@ -399,16 +399,15 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
     <button type="button" class="btn btn-ghost" id="qf-m1" onclick="setQF('m1')">M1</button>
   </div>
   <div class="toolbar-sep"></div>
-  <input type="hidden" name="adviser" id="adviser-input" value="{% if selected_advisers %}{{ selected_advisers|join(',') }}{% else %}team{% endif %}">
+  <input type="hidden" name="adviser" id="adviser-input" value="{{ selected_advisers|join(',') }}">
   <div class="ms-dropdown" id="adviser-dropdown">
     <button type="button" class="btn btn-ghost ms-btn" id="ms-btn" onclick="toggleAdviserDD()">
-      <span id="ms-label">{% if not selected_advisers %}All Advisers{% elif selected_advisers|length == 1 %}{% for r in perf_rows %}{% if r.user_id|string == selected_advisers[0] %}{{ r.name }}{% endif %}{% endfor %}{% else %}LIP Team{% endif %}</span>
+      <span id="ms-label">{% if selected_advisers|length == 1 %}{% for r in perf_rows %}{% if r.user_id|string == selected_advisers[0] %}{{ r.name }}{% endif %}{% endfor %}{% elif selected_advisers|length == perf_rows|length %}All Advisers{% else %}{{ selected_advisers|length }} Advisers{% endif %}</span>
       <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div class="ms-panel" id="ms-panel">
-      <label class="ms-option"><input type="checkbox" id="ms-all" onchange="msToggleAll(this.checked)" {% if not selected_advisers %}checked{% endif %}><span>Select All</span></label>
       {% for r in perf_rows %}
-      <label class="ms-option"><input type="checkbox" class="ms-adv" value="{{ r.user_id }}" onchange="msAdvChanged()" {% if not selected_advisers or r.user_id|string in selected_advisers %}checked{% endif %}><span>{{ r.name }}</span></label>
+      <label class="ms-option"><input type="checkbox" class="ms-adv" value="{{ r.user_id }}" {% if r.user_id|string in selected_advisers %}checked{% endif %}><span>{{ r.name }}</span></label>
       {% endfor %}
       <div class="ms-actions"><button type="button" class="btn btn-primary btn-sm" onclick="msApply()">Apply</button></div>
     </div>
@@ -595,14 +594,10 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 
       <div class="modal-section-title">Targets</div>
 
-      <div class="tgt-line-row">
-        <div class="tgt-field"><label>Talk / Day</label><input type="number" id="t-talk-tgt" min="0" step="5" placeholder="150"><div class="tgt-hint">Default 150 (2h 30m)</div></div>
-      </div>
-      <div class="tgt-line-row">
-        <div class="tgt-field"><label>Quotes / Day</label><input type="number" id="t-q-tgt" min="0" step="1" placeholder="6"><div class="tgt-hint">Default 6</div></div>
-      </div>
-      <div class="tgt-line-row">
-        <div class="tgt-field"><label>Apps / Day</label><input type="number" id="t-a-tgt" min="0" step="0.5" placeholder="2"><div class="tgt-hint">Default 2</div></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="tgt-field" style="flex:1;min-width:120px"><label>Talk / Day</label><input type="number" id="t-talk-tgt" min="0" step="5" placeholder="150"><div class="tgt-hint">Default 150 (2h 30m)</div></div>
+        <div class="tgt-field" style="flex:1;min-width:120px"><label>Quotes / Day</label><input type="number" id="t-q-tgt" min="0" step="1" placeholder="6"><div class="tgt-hint">Default 6</div></div>
+        <div class="tgt-field" style="flex:1;min-width:120px"><label>Apps / Day</label><input type="number" id="t-a-tgt" min="0" step="0.5" placeholder="2"><div class="tgt-hint">Default 2</div></div>
       </div>
       <div class="tgt-line-row">
         <div class="tgt-field"><label>Inforce $ / Month — Per Adviser</label>
@@ -708,9 +703,7 @@ const checksRawData   = {{ checks_rows | tojson }};
 const selectedAdvisers = new Set();
 (function(){
   const val = document.getElementById('adviser-input').value;
-  if(val && val !== 'team'){
-    val.split(',').forEach(id=>{ const n=parseInt(id); if(!isNaN(n)) selectedAdvisers.add(n); });
-  }
+  if(val) val.split(',').forEach(id=>{ const n=parseInt(id); if(!isNaN(n)) selectedAdvisers.add(n); });
 })();
 
 const QF = {
@@ -851,22 +844,10 @@ function toggleAdviserDD(){
   const panel=document.getElementById('ms-panel');
   panel.classList.toggle('open');
 }
-function msToggleAll(checked){
-  document.querySelectorAll('.ms-adv').forEach(cb=>cb.checked=checked);
-}
-function msAdvChanged(){
-  const all=document.querySelectorAll('.ms-adv');
-  const allChecked=[...all].every(cb=>cb.checked);
-  document.getElementById('ms-all').checked=allChecked;
-}
 function msApply(){
-  const all=document.getElementById('ms-all').checked;
   const checked=[...document.querySelectorAll('.ms-adv:checked')].map(cb=>cb.value);
-  document.getElementById('adviser-input').value=all?'team':checked.join(',');
-  const lbl=document.getElementById('ms-label');
-  if(all) lbl.textContent='All Advisers';
-  else if(checked.length===1){const nm=document.querySelector(`.ms-adv[value="${checked[0]}"]`);lbl.textContent=nm?nm.closest('label').textContent.trim():'1 Adviser';}
-  else lbl.textContent='LIP Team';
+  if(!checked.length){alert('Select at least one adviser');return;}
+  document.getElementById('adviser-input').value=checked.join(',');
   document.getElementById('ms-panel').classList.remove('open');
   submitForm();
 }
@@ -895,11 +876,11 @@ function setQF(key){
 
 // ── Row filter (multi-select) ──
 function filterRows(){
-  const showAll = selectedAdvisers.size===0;
   document.querySelectorAll('.adviser-row').forEach(r=>{
-    r.style.display=(showAll||selectedAdvisers.has(parseInt(r.dataset.uid)))?'':'none';
+    r.style.display=selectedAdvisers.has(parseInt(r.dataset.uid))?'':'none';
   });
   // Show Jinja footer only when all selected; otherwise recalc
+  const showAll = selectedAdvisers.size===allAdvisers.length;
   ['team-total-row','checks-total-row'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.style.display=showAll?'':'none';
   });
@@ -1010,7 +991,7 @@ function cumulative(arr){
 
 // ── Aggregation: multi-select aware ──
 function getPerfS(){
-  const chosen = selectedAdvisers.size===0 ? allAdvisers : allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
+  const chosen = allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
   if(!chosen.length) return{name:'—',talk_mins:[],quotes_cnt:[],apps_cnt:[],apps_val:[],inforce_val:[],calls_cnt:[]};
   const n=chosen.length;
   return{
@@ -1040,9 +1021,9 @@ function rebuildCharts(){
   const totInf  = total(ps.inforce_val);
 
   // ── Inforce target (multi-select aware) ──
-  const chosen = selectedAdvisers.size===0 ? allAdvisers : allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
+  const chosen = allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
   let infScaledTgt;
-  if(chosen.length>1 || selectedAdvisers.size===0){
+  if(chosen.length>1){
     infScaledTgt = chosen.reduce((s,a)=>s+(T.infTgts[a.uid]||20000),0);
   } else if(chosen.length===1){
     infScaledTgt = T.infTgts[chosen[0].uid]||20000;

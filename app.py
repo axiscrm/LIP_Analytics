@@ -839,10 +839,10 @@ def index():
 
     # Parse multi-select adviser param (default excludes Lucas 53)
     selected_adviser_raw = request.args.get("adviser", "")
-    if not selected_adviser_raw or selected_adviser_raw == "team":
-        selected_advisers = [str(uid) for uid in sorted(SHOW_USER_IDS) if uid != 53]
-    else:
+    if selected_adviser_raw:
         selected_advisers = [s.strip() for s in selected_adviser_raw.split(",") if s.strip()]
+    else:
+        selected_advisers = [str(uid) for uid in sorted(SHOW_USER_IDS) if uid != 53]
 
     total_ms = (time.monotonic() - req_t0) * 1000
     log.info("Dashboard total: %.0f ms", total_ms)
