@@ -301,6 +301,15 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .remed-status-inprogress{background:rgba(59,130,246,.12);color:#2563eb}
 .remed-status-resolved{background:rgba(18,183,118,.12);color:#059669}
 .remed-empty{text-align:center;padding:48px 24px;color:var(--g400);font-size:13px}
+/* Lead status badges */
+.lead-status-new{background:rgba(59,130,246,.12);color:#2563eb}
+.lead-status-open{background:rgba(139,92,246,.12);color:#7c3aed}
+.lead-status-quoted{background:rgba(234,179,8,.15);color:#b45309}
+.lead-status-applied{background:rgba(217,119,6,.12);color:#c2410c}
+.lead-status-won{background:rgba(18,183,118,.12);color:#059669}
+.lead-status-lost{background:rgba(239,68,68,.1);color:#dc2626}
+/* Assigned link in table */
+.assigned-link{color:var(--orange);font-weight:600;text-decoration:underline;cursor:pointer}
 
 /* Column group shading removed */
 @media(max-width:768px){
@@ -524,7 +533,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
           {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
           <span class="adviser-name">{{ r.name }}</span>
         </div></td>
-        <td>{{ r.assigned }}</td>
+        <td>{% if r.assigned > 0 %}<a href="#" class="assigned-link" data-uid="{{ r.user_id }}">{{ r.assigned }}</a>{% else %}0{% endif %}</td>
         <td>{{ r.contacted }}</td>
         <td>{{ r.not_contacted }}</td>
         <td>{{ r.booked }}</td>
@@ -614,7 +623,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
           <span class="adviser-name">{{ r.name }}</span>
         </div></td>
         <td>{{ r.days_worked }}</td>
-        <td>{{ r.assigned }}</td>
+        <td>{% if r.assigned > 0 %}<a href="#" class="assigned-link" data-uid="{{ r.user_id }}">{{ r.assigned }}</a>{% else %}0{% endif %}</td>
         <td data-cg="b">{{ r.talk_time }}</td>
         <td data-cg="b"><span class="badge badge-{{ r.talk_color }}" data-badge="talk">{{ r.talk_per_day }}</span></td>
         <td data-cg="c">{{ r.quotes_count }}</td>
@@ -779,6 +788,36 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   <div class="remed-panel-body" id="remed-panel-body"></div>
 </div>
 
+<!-- ══ ASSIGNED LEADS SLIDE-IN PANEL ══ -->
+<div class="remed-backdrop" id="assigned-backdrop" onclick="closeAssigned()"></div>
+<div class="remed-panel" id="assigned-panel">
+  <div class="remed-panel-header">
+    <div class="remed-panel-header-top">
+      <div>
+        <div class="remed-panel-title" id="assigned-panel-title">Assigned Leads</div>
+        <div class="remed-panel-sub" id="assigned-panel-sub"></div>
+      </div>
+      <button class="remed-panel-close" onclick="closeAssigned()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="remed-tabs">
+      <button class="remed-tab active" data-assigned-tab="active" onclick="switchAssignedTab('active')">Active <span class="remed-tab-count" id="assigned-cnt-active">0</span></button>
+      <button class="remed-tab" data-assigned-tab="closed" onclick="switchAssignedTab('closed')">Closed <span class="remed-tab-count" id="assigned-cnt-closed">0</span></button>
+    </div>
+  </div>
+  <div class="remed-toolbar">
+    <button class="remed-sort-btn" id="assigned-sort-btn" onclick="toggleAssignedSort()">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 5l4-3 4 3M4 11l4 3 4-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="assigned-sort-label">Oldest first</span>
+    </button>
+    <select class="remed-filter" id="assigned-filter" onchange="applyAssignedFilter()">
+      <option value="">All statuses</option>
+    </select>
+  </div>
+  <div class="remed-panel-body" id="assigned-panel-body"></div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <svg class="toast-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L14 13H2L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3M8 10.5h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -795,6 +834,8 @@ const TEAM_AVGS       = {{ team_avgs | tojson }};
 const allAdvisers     = {{ chart_advisers | tojson }};
 const checksRawData   = {{ checks_rows | tojson }};
 const remedDetails    = {{ remed_details | tojson }};
+const assignedDetails = {{ assigned_details | tojson }};
+const LEAD_STATUS     = {{ lead_status | tojson }};
 const CRM_BASE        = "{{ crm_base_url }}";
 
 // Build per-adviser inforce target inputs inside modal
@@ -1420,6 +1461,167 @@ function closeRemed(){
 document.addEventListener('click',function(e){
   const link=e.target.closest('.remed-pending-link');
   if(link){e.preventDefault();openRemed(parseInt(link.dataset.uid));}
+});
+
+// ── Assigned Leads slide-in panel ──
+const LEAD_STATUS_CLS={0:'lead-status-new',1:'lead-status-open',2:'lead-status-quoted',3:'lead-status-applied',4:'lead-status-lost',5:'lead-status-won'};
+const LEAD_ACTIVE=new Set([0,1,2,3]);
+const LEAD_CLOSED=new Set([4,5]);
+let _assignedUid=null;
+let _assignedTab='active';
+let _assignedSortAsc=true;
+let _assignedFilter='';
+let _assignedExpandTimers={};
+
+function getFilteredAssigned(){
+  const allItems=assignedDetails[_assignedUid]||[];
+  const tabSet=_assignedTab==='active'?LEAD_ACTIVE:LEAD_CLOSED;
+  let items=allItems.filter(it=>tabSet.has(it.status));
+  if(_assignedFilter) items=items.filter(it=>String(it.status)===_assignedFilter);
+  items.sort((a,b)=>_assignedSortAsc
+    ? a.assigned_date.localeCompare(b.assigned_date)
+    : b.assigned_date.localeCompare(a.assigned_date));
+  return items;
+}
+
+function renderAssignedCards(items){
+  const body=document.getElementById('assigned-panel-body');
+  Object.values(_assignedExpandTimers).forEach(clearTimeout);
+  _assignedExpandTimers={};
+  if(!items.length){
+    const msg=_assignedTab==='active'?'No active leads in this period.':'No closed leads in this period.';
+    body.innerHTML=`<div class="remed-empty">${msg}</div>`;
+    return;
+  }
+  body.innerHTML=items.map((it,idx)=>{
+    const stLbl=LEAD_STATUS[it.status]||'Unknown';
+    const stCls=LEAD_STATUS_CLS[it.status]||'';
+    const clientName=it.client_name||'Client #'+it.lead_id;
+    const beaconCls=remedAgeBeacon(it.assigned_date);
+    const note=it.last_note||'';
+    const src=it.source||'';
+    const url=`${CRM_BASE}/leads/${it.lead_id}/`;
+    return `<a class="remed-card" href="${url}" target="_blank">
+      <div class="remed-card-top">
+        <div class="remed-card-client">${clientName}</div>
+        <div class="remed-card-date-wrap">
+          <span class="${beaconCls}"></span>
+          <span class="remed-card-date">${it.assigned_date}</span>
+        </div>
+      </div>
+      <div class="remed-card-field">
+        <div class="remed-card-label">Status</div>
+        <div class="remed-card-value"><span class="remed-status ${stCls}">${stLbl}</span></div>
+      </div>
+      ${src?`<div class="remed-card-field">
+        <div class="remed-card-label">Source</div>
+        <div class="remed-card-value">${src}</div>
+      </div>`:''}
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-aidx="${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last note
+        </button>
+        <div class="remed-accordion-body" id="assigned-note-${idx}">
+          <div class="remed-accordion-text">${note||'No information provided'}</div>
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+function toggleAssignedAccordion(e){
+  const btn=e.target.closest('[data-aidx]');
+  if(!btn||!btn.classList.contains('remed-accordion-btn')) return;
+  e.preventDefault();e.stopPropagation();
+  const idx=btn.dataset.aidx;
+  const body=document.getElementById('assigned-note-'+idx);
+  if(!body) return;
+  const isOpen=btn.classList.toggle('open');
+  body.classList.toggle('open',isOpen);
+  if(_assignedExpandTimers[idx]){clearTimeout(_assignedExpandTimers[idx]);delete _assignedExpandTimers[idx];}
+  if(isOpen){
+    _assignedExpandTimers[idx]=setTimeout(()=>{
+      btn.classList.remove('open');
+      body.classList.remove('open');
+      delete _assignedExpandTimers[idx];
+    },20000);
+  }
+}
+document.addEventListener('click',toggleAssignedAccordion);
+
+function populateAssignedFilter(){
+  const allItems=assignedDetails[_assignedUid]||[];
+  const tabSet=_assignedTab==='active'?LEAD_ACTIVE:LEAD_CLOSED;
+  const tabItems=allItems.filter(it=>tabSet.has(it.status));
+  const statuses=[...new Set(tabItems.map(it=>it.status))].sort();
+  const sel=document.getElementById('assigned-filter');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">All statuses</option>'+statuses.map(s=>`<option value="${s}">${LEAD_STATUS[s]||'Unknown'}</option>`).join('');
+  sel.value=statuses.map(String).includes(prev)?prev:'';
+  _assignedFilter=sel.value;
+}
+
+function toggleAssignedSort(){
+  _assignedSortAsc=!_assignedSortAsc;
+  document.getElementById('assigned-sort-label').textContent=_assignedSortAsc?'Oldest first':'Newest first';
+  updateAssignedPanel();
+}
+function applyAssignedFilter(){
+  _assignedFilter=document.getElementById('assigned-filter').value;
+  updateAssignedPanel();
+}
+
+function openAssigned(uid){
+  _assignedUid=uid;
+  _assignedTab='active';
+  _assignedSortAsc=true;
+  _assignedFilter='';
+  document.getElementById('assigned-sort-label').textContent='Oldest first';
+  const advName=allAdvisers.find(a=>a.uid===uid)?.name||'Adviser';
+  document.getElementById('assigned-panel-title').textContent='Assigned Leads — '+advName;
+  document.querySelectorAll('#assigned-panel .remed-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.assignedTab==='active');
+  });
+  populateAssignedFilter();
+  updateAssignedPanel();
+  document.getElementById('assigned-backdrop').classList.add('open');
+  document.getElementById('assigned-panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function updateAssignedPanel(){
+  const allItems=assignedDetails[_assignedUid]||[];
+  const active=allItems.filter(it=>LEAD_ACTIVE.has(it.status));
+  const closed=allItems.filter(it=>LEAD_CLOSED.has(it.status));
+  document.getElementById('assigned-cnt-active').textContent=active.length;
+  document.getElementById('assigned-cnt-closed').textContent=closed.length;
+  const items=getFilteredAssigned();
+  document.getElementById('assigned-panel-sub').textContent=items.length+' lead'+(items.length!==1?'s':'');
+  renderAssignedCards(items);
+}
+
+function switchAssignedTab(tab){
+  _assignedTab=tab;
+  _assignedFilter='';
+  document.querySelectorAll('#assigned-panel .remed-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.assignedTab===tab);
+  });
+  populateAssignedFilter();
+  updateAssignedPanel();
+  document.getElementById('assigned-panel-body').scrollTop=0;
+}
+
+function closeAssigned(){
+  document.getElementById('assigned-backdrop').classList.remove('open');
+  document.getElementById('assigned-panel').classList.remove('open');
+  document.body.style.overflow='';
+  Object.values(_assignedExpandTimers).forEach(clearTimeout);
+  _assignedExpandTimers={};
+}
+document.addEventListener('click',function(e){
+  const link=e.target.closest('.assigned-link');
+  if(link){e.preventDefault();openAssigned(parseInt(link.dataset.uid));}
 });
 
 function resetTargets(){

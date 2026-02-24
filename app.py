@@ -672,6 +672,42 @@ def get_remediation_stats(cursor, start, end):
     return counts, dict(details)
 
 
+# Lead status map (CRM convention)
+LEAD_STATUS = {0: "New", 1: "Open", 2: "Quoted", 3: "Applied", 4: "Lost", 5: "Won"}
+LEAD_STATUS_ACTIVE = {0, 1, 2, 3}   # "Active" tab
+LEAD_STATUS_CLOSED = {4, 5}          # "Closed" tab
+
+
+def get_assigned_lead_details(cursor, start, end):
+    """All leads assigned in the period, per adviser — for the slide-in panel."""
+    cursor.execute("""
+        SELECT l.id          AS lead_id,
+               l.user_id     AS adviser_id,
+               CONCAT(l.first_name,' ',l.last_name) AS client_name,
+               l.status,
+               l.source_code,
+               DATE(l.assigned)                      AS assigned_date,
+               LEFT(l.last_note, 500)                AS last_note
+        FROM leads_lead l
+        WHERE l.assigned >= %s AND l.assigned < %s
+          AND l.user_id IN ({uids})
+        ORDER BY l.assigned ASC
+    """.format(uids=_USER_IDS_SQL),
+        (start.isoformat(), (end + timedelta(days=1)).isoformat()),
+    )
+    details = defaultdict(list)
+    for r in cursor.fetchall():
+        details[r["adviser_id"]].append({
+            "lead_id": r["lead_id"],
+            "client_name": (r["client_name"] or "").strip(),
+            "status": int(r["status"]),
+            "source": (r["source_code"] or "").strip(),
+            "assigned_date": str(r["assigned_date"]),
+            "last_note": (r["last_note"] or "").strip(),
+        })
+    return dict(details)
+
+
 @app.route("/")
 @login_required
 def index():
@@ -778,6 +814,7 @@ def index():
             dates_list = [d for d in dates_list if date.fromisoformat(d).weekday() < 5]
         appt_today, appt_future = _timed("appointments", get_schedule_appointments, cursor, today)
         remed_counts, remed_details = _timed("remediations", get_remediation_stats, cursor, start, end)
+        assigned_details = _timed("assigned_details", get_assigned_lead_details, cursor, start, end)
     finally:
         cursor.close(); conn.close()
 
@@ -936,6 +973,8 @@ def index():
         team_avgs=team_avgs,
         chart_mode=chart_mode,
         remed_details=remed_details,
+        assigned_details=assigned_details,
+        lead_status=LEAD_STATUS,
         crm_base_url=CRM_BASE_URL,
     )
 
