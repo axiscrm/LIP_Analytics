@@ -246,14 +246,21 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .ms-option input[type=checkbox]{accent-color:var(--orange);width:15px;height:15px;cursor:pointer}
 .ms-actions{padding:8px 14px 4px;border-top:1px solid var(--g100);margin-top:4px}
 .btn-sm{height:28px;padding:0 10px;font-size:12px}
-/* Remediation popup table */
-#remed-modal-tbody td{padding:8px 10px;font-size:12px;border-bottom:1px solid var(--g100);vertical-align:top;color:var(--g700)}
-#remed-modal-tbody td:last-child{max-width:280px;white-space:normal;word-break:break-word}
-.remed-status{display:inline-flex;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+/* Remediation popup */
+#remed-modal .modal{width:720px}
+#remed-modal .modal-body{padding:0;max-height:65vh;overflow-y:auto}
+.remed-table-wrap{padding:4px 24px 24px}
+.remed-table{width:100%;border-collapse:collapse;font-size:13px}
+.remed-table thead th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.03em;background:var(--g50);border-bottom:1px solid var(--g200);position:sticky;top:0}
+.remed-table tbody td{padding:10px 12px;border-bottom:1px solid var(--g100);vertical-align:top;color:var(--g700)}
+.remed-table tbody tr:last-child td{border-bottom:none}
+.remed-detail-cell{max-width:260px;white-space:normal;word-break:break-word;font-size:12px;color:var(--g500);line-height:1.4}
+.remed-status{display:inline-flex;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
 .remed-status-pending{background:rgba(234,179,8,.15);color:#b45309}
 .remed-status-inprogress{background:rgba(59,130,246,.12);color:#2563eb}
 .remed-link{color:var(--orange);text-decoration:none;font-weight:500}
 .remed-link:hover{text-decoration:underline}
+.remed-empty{text-align:center;padding:40px 24px;color:var(--g400);font-size:13px}
 
 /* Column group shading removed */
 @media(max-width:768px){
@@ -297,6 +304,10 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   .thr-inputs-row{gap:6px}
   .tgt-line-row{margin-bottom:10px}
   .tgt-color-label{display:none}
+  /* Remediation modal */
+  #remed-modal .modal-body{max-height:none;overflow-y:visible}
+  .remed-table-wrap{padding:4px 14px 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .remed-table{min-width:520px}
 }
 </style>
 </head>
@@ -700,7 +711,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 
 <!-- ══ REMEDIATION DETAIL MODAL ══ -->
 <div class="modal-overlay" id="remed-modal" onclick="closeRemedOutside(event)">
-  <div class="modal" style="width:820px">
+  <div class="modal">
     <div class="modal-header">
       <div>
         <div class="modal-title" id="remed-modal-title">Pending Remediations</div>
@@ -710,21 +721,22 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
     </div>
-    <div class="modal-body" style="padding:0 0 12px;max-height:70vh;overflow-y:auto">
-      <table style="width:100%;border-collapse:collapse">
-        <thead>
-          <tr style="background:var(--g50);border-bottom:1px solid var(--g200);position:sticky;top:0">
-            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Created</th>
-            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Status</th>
-            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">App ID</th>
-            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Client</th>
-            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Task</th>
-            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--g500)">Detail</th>
-          </tr>
-        </thead>
-        <tbody id="remed-modal-tbody"></tbody>
-      </table>
-      <div id="remed-modal-empty" style="display:none;text-align:center;padding:32px;color:var(--g400);font-size:13px">
+    <div class="modal-body">
+      <div class="remed-table-wrap">
+        <table class="remed-table">
+          <thead>
+            <tr>
+              <th>Created</th>
+              <th>Status</th>
+              <th>Client</th>
+              <th>Task</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody id="remed-modal-tbody"></tbody>
+        </table>
+      </div>
+      <div id="remed-modal-empty" class="remed-empty" style="display:none">
         No pending remediations in this period.
       </div>
     </div>
@@ -1218,17 +1230,14 @@ function openRemed(uid){
       const stLbl=REMED_STATUS[it.status]||'Unknown';
       const stCls=REMED_CLS[it.status]||'';
       const clientLink=`<a class="remed-link" href="${CRM_BASE}/leads/${it.lead_id}/" target="_blank">${it.client_name||'Client #'+it.lead_id}</a>`;
-      let appCell='—';
-      if(it.app_id) appCell=`<a class="remed-link" href="${CRM_BASE}/applications/${it.app_id}/" target="_blank">#${it.app_id}</a>`;
       const detail=it.description||it.last_note||'—';
       const detailShort=detail.length>200?detail.substring(0,200)+'…':detail;
       return `<tr>
         <td style="white-space:nowrap">${it.created_date}</td>
         <td><span class="remed-status ${stCls}">${stLbl}</span></td>
-        <td>${appCell}</td>
         <td>${clientLink}</td>
         <td style="white-space:nowrap">${it.task_name}</td>
-        <td title="${detail.replace(/"/g,'&quot;')}">${detailShort}</td>
+        <td class="remed-detail-cell" title="${detail.replace(/"/g,'&quot;')}">${detailShort}</td>
       </tr>`;
     }).join('');
   }
