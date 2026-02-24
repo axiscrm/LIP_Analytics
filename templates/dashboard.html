@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LIP Performance</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -236,11 +237,94 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 /* Targets text — hide on mobile */
 .targets-text{display:inline;}
 
+/* Multi-select dropdown */
+.ms-dropdown{position:relative}
+.ms-btn{min-width:160px;justify-content:space-between}
+.ms-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:#fff;border:1px solid var(--g200);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px 0;min-width:200px;max-height:280px;overflow-y:auto}
+.ms-panel.open{display:block}
+.ms-option{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:13px;color:var(--g700);cursor:pointer;user-select:none;white-space:nowrap}
+.ms-option:hover{background:var(--g50)}
+.ms-option input[type=checkbox]{accent-color:var(--orange);width:15px;height:15px;cursor:pointer}
+.ms-actions{padding:8px 14px 4px;border-top:1px solid var(--g100);margin-top:4px}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+/* Remediation slide-in panel */
+.remed-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1000;opacity:0;pointer-events:none;transition:opacity .25s ease}
+.remed-backdrop.open{opacity:1;pointer-events:auto}
+.remed-panel{position:fixed;top:0;right:0;width:440px;max-width:100vw;height:100vh;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.1);z-index:1001;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.remed-panel.open{transform:translateX(0)}
+.remed-panel-header{padding:20px 24px 0;border-bottom:1px solid var(--g100)}
+.remed-panel-header-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.remed-panel-header-top div:first-child{flex:1;min-width:0}
+.remed-panel-title{font-size:16px;font-weight:600;color:var(--g800);margin:0}
+.remed-panel-sub{font-size:12px;color:var(--g400);margin-top:3px}
+.remed-panel-close{width:32px;height:32px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--g400);flex-shrink:0;margin:-4px -8px 0 8px}
+.remed-panel-close:hover{background:var(--g50);color:var(--g600)}
+/* Tabs inside panel */
+.remed-tabs{display:flex;gap:0}
+.remed-tab{flex:1;padding:10px 0;font-size:13px;font-weight:500;color:var(--g400);text-align:center;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.remed-tab:hover{color:var(--g600)}
+.remed-tab.active{color:var(--orange);border-bottom-color:var(--orange);font-weight:600}
+.remed-tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:18px;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;margin-left:6px}
+.remed-tab.active .remed-tab-count{background:rgba(217,119,6,.1);color:#b45309}
+.remed-tab:not(.active) .remed-tab-count{background:var(--g100);color:var(--g400)}
+/* Toolbar row (sort + filter) */
+.remed-toolbar{display:flex;align-items:center;gap:8px;padding:12px 24px 0;flex-wrap:wrap}
+.remed-sort-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border:1px solid var(--g200);border-radius:6px;background:#fff;font-size:12px;color:var(--g600);cursor:pointer;white-space:nowrap;transition:border-color .15s}
+.remed-sort-btn:hover{border-color:var(--g300)}
+.remed-sort-btn svg{width:14px;height:14px;flex-shrink:0}
+.remed-filter{flex:1;min-width:140px;padding:5px 10px;border:1px solid var(--g200);border-radius:6px;background:#fff;font-size:12px;color:var(--g600);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%2398A2B3' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px}
+.remed-filter:hover{border-color:var(--g300)}
+/* Body */
+.remed-panel-body{flex:1;overflow-y:auto;padding:12px 24px 24px;-webkit-overflow-scrolling:touch}
+/* Cards */
+.remed-card{display:block;text-decoration:none;color:inherit;background:var(--g50);border:1px solid var(--g100);border-radius:10px;padding:16px 18px;margin-bottom:12px;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.remed-card:hover{border-color:rgba(217,119,6,.4);box-shadow:0 0 0 3px rgba(217,119,6,.08),0 2px 12px rgba(217,119,6,.12)}
+.remed-card:last-child{margin-bottom:0}
+.remed-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.remed-card-client{font-size:14px;font-weight:600;color:var(--orange);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.remed-card-date-wrap{display:flex;align-items:center;gap:6px;margin-left:12px;flex-shrink:0}
+.remed-card-date{font-size:11px;color:var(--g400);white-space:nowrap}
+.remed-card-field{margin-bottom:10px}
+.remed-card-field:last-child{margin-bottom:0}
+.remed-card-label{font-size:11px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.remed-card-value{font-size:13px;color:var(--g700);line-height:1.5;word-break:break-word}
+/* Compliance note accordion */
+.remed-accordion{margin-top:2px;border-top:1px solid var(--g100);padding-top:8px}
+.remed-accordion-btn{display:flex;align-items:center;gap:6px;width:100%;padding:0;border:none;background:none;color:var(--g500);font-size:12px;font-weight:500;cursor:pointer;transition:color .15s}
+.remed-accordion-btn:hover{color:var(--g700)}
+.remed-accordion-btn svg{width:14px;height:14px;flex-shrink:0;transition:transform .2s}
+.remed-accordion-btn.open svg{transform:rotate(180deg)}
+.remed-accordion-body{max-height:0;overflow:hidden;transition:max-height .25s ease}
+.remed-accordion-body.open{max-height:400px}
+.remed-accordion-text{padding:8px 0 0;font-size:13px;color:var(--g600);line-height:1.5;word-break:break-word}
+.remed-status{display:inline-flex;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.remed-status-pending{background:rgba(234,179,8,.15);color:#b45309}
+.remed-status-inprogress{background:rgba(59,130,246,.12);color:#2563eb}
+.remed-status-resolved{background:rgba(18,183,118,.12);color:#059669}
+.remed-empty{text-align:center;padding:48px 24px;color:var(--g400);font-size:13px}
+/* Lead status badges */
+.lead-status-prospect{background:rgba(59,130,246,.12);color:#2563eb}
+.lead-status-contacted{background:rgba(139,92,246,.12);color:#7c3aed}
+.lead-status-booked{background:rgba(234,179,8,.15);color:#b45309}
+.lead-status-quoted{background:rgba(217,119,6,.12);color:#c2410c}
+.lead-status-applied{background:rgba(249,115,22,.12);color:#c2410c}
+.lead-status-won{background:rgba(18,183,118,.12);color:#059669}
+.lead-status-lost{background:rgba(239,68,68,.1);color:#dc2626}
+/* Assigned link in table */
+.assigned-link{color:var(--orange);font-weight:600;text-decoration:underline;cursor:pointer}
+/* Topbar unassigned badge */
+.topbar-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.85);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s;font-family:'Inter',sans-serif;margin-right:4px}
+.topbar-badge:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25)}
+.unassigned-field-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.unassigned-field-label{font-size:11px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.04em;min-width:60px}
+.unassigned-field-value{font-size:13px;color:var(--g700)}
+
 /* Column group shading removed */
 @media(max-width:768px){
   /* Header */
   .topbar{padding:0 14px;gap:10px;height:52px}
   .topbar-meta{display:none}
+  .topbar-badge{padding:3px 8px;font-size:11px;gap:4px}
   /* Toolbar */
   .toolbar{padding:10px 14px;gap:6px;flex-wrap:wrap}
   .toolbar input[type=date]{flex:1;min-width:120px}
@@ -255,7 +339,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   .qf-group{order:3;flex-basis:100%;display:flex;gap:4px;justify-content:space-between}
   .qf-group .btn{flex:1;min-width:0;padding:6px 2px;font-size:12px;justify-content:center;text-align:center}
   /* Row 3: adviser dropdown full width */
-  #adviser-select{width:100%;flex-basis:100%;order:10;height:38px;font-size:14px}
+  .ms-dropdown{width:100%;flex-basis:100%;order:10}
+  .ms-btn{width:100%;height:38px;font-size:14px}
   /* Tabs */
   .tabs{padding:0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .tab{padding:10px 12px;margin-right:12px;font-size:13px;white-space:nowrap}
@@ -277,6 +362,10 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   .thr-inputs-row{gap:6px}
   .tgt-line-row{margin-bottom:10px}
   .tgt-color-label{display:none}
+  /* Remediation panel */
+  .remed-panel{width:100vw}
+  .remed-toolbar{padding:10px 14px 0}
+  .remed-filter{min-width:100px}
 }
 </style>
 </head>
@@ -338,6 +427,10 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
     <path d="M97.6012 24.8107C97.6012 25.0207 97.738 25.194 98.0115 25.3305C98.2955 25.4565 98.6373 25.572 99.037 25.677C99.4367 25.7715 99.8364 25.8975 100.236 26.055C100.636 26.202 100.972 26.454 101.246 26.811C101.53 27.168 101.672 27.6143 101.672 28.1497C101.672 28.9583 101.367 29.583 100.757 30.024C100.157 30.4545 99.4052 30.6697 98.5006 30.6697C96.8807 30.6697 95.7763 30.045 95.1872 28.7955L96.9544 27.8033C97.1858 28.4858 97.7012 28.827 98.5006 28.827C99.2264 28.827 99.5892 28.6012 99.5892 28.1497C99.5892 27.9397 99.4472 27.7717 99.1632 27.6458C98.8898 27.5092 98.5532 27.3885 98.1535 27.2835C97.7538 27.1785 97.3541 27.0473 96.9544 26.8898C96.5547 26.7323 96.2128 26.4855 95.9288 26.1495C95.6553 25.803 95.5186 25.3725 95.5186 24.858C95.5186 24.081 95.8026 23.472 96.3706 23.031C96.9491 22.5795 97.6644 22.3538 98.5164 22.3538C99.158 22.3538 99.7418 22.5007 100.268 22.7947C100.794 23.0782 101.209 23.4878 101.514 24.0233L99.7786 24.9683C99.5261 24.4328 99.1054 24.165 98.5164 24.165C98.2534 24.165 98.0325 24.2228 97.8537 24.3383C97.6854 24.4538 97.6012 24.6112 97.6012 24.8107Z" fill="rgba(255,255,255,.6)"/>
   </svg>
   <div class="topbar-spacer"></div>
+  <button class="topbar-badge" id="unassigned-badge" onclick="openUnassigned()" title="Unassigned leads — click to view">
+    <span class="beacon" id="beacon-unassigned"></span>
+    <span id="unassigned-label">Unassigned: {{ unassigned_leads|length }}</span>
+  </button>
   <span class="topbar-meta">{{ biz_days }} business days</span>
   <span class="topbar-meta">Data Updated To: {{ last_refresh }}</span>
   <a href="/logout" style="color:rgba(255,255,255,.6);font-size:12px;font-weight:500;text-decoration:none;padding:4px 10px;border:1px solid rgba(255,255,255,.25);border-radius:6px;margin-left:8px;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">Sign out</a>
@@ -387,125 +480,114 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
     <button type="button" class="btn btn-ghost" id="qf-m1" onclick="setQF('m1')">M1</button>
   </div>
   <div class="toolbar-sep"></div>
-  <select name="adviser" id="adviser-select">
-    <option value="team" {% if selected_adviser=='team' %}selected{% endif %}>All Advisers</option>
-    {% for r in perf_rows %}
-    <option value="{{ r.user_id }}" {% if selected_adviser==r.user_id|string %}selected{% endif %}>{{ r.name }}</option>
-    {% endfor %}
-  </select>
+  <input type="hidden" name="adviser" id="adviser-input" value="{{ selected_advisers|join(',') }}">
+  <div class="ms-dropdown" id="adviser-dropdown">
+    <button type="button" class="btn btn-ghost ms-btn" id="ms-btn" onclick="toggleAdviserDD()">
+      <span id="ms-label">{% if selected_advisers|length == 1 %}{% for r in perf_rows %}{% if r.user_id|string == selected_advisers[0] %}{{ r.name }}{% endif %}{% endfor %}{% elif selected_advisers|length == perf_rows|length %}All Advisers{% else %}{{ selected_advisers|length }} Advisers{% endif %}</span>
+      <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="ms-panel" id="ms-panel">
+      {% for r in perf_rows %}
+      <label class="ms-option"><input type="checkbox" class="ms-adv" value="{{ r.user_id }}" {% if r.user_id|string in selected_advisers %}checked{% endif %}><span>{{ r.name }}</span></label>
+      {% endfor %}
+      <div class="ms-actions"><button type="button" class="btn btn-primary btn-sm" onclick="msApply()">Apply</button></div>
+    </div>
+  </div>
 </form>
 
 <div class="tabs">
-  <div class="tab" id="tab-perf"     onclick="showTab('perf',this)">Performance Tracker</div>
-  <div class="tab" id="tab-daily"    onclick="showTab('daily',this)">Daily Checks</div>
-  <div class="tab" id="tab-pipeline" onclick="showTab('pipeline',this)">Leads Tracker</div>
+  <div class="tab" id="tab-perf"   onclick="showTab('perf',this)">Performance</div>
+  <div class="tab" id="tab-checks" onclick="showTab('checks',this)">Checks</div>
 </div>
 
 <div class="content">
 
-<!-- ══ DAILY CHECKS ══ -->
-<div id="daily" class="panel">
-  {% set dc = namespace(contacted=0,q=0,a=0,inf=0,at=0,af=0) %}
-  {% for r in daily_rows %}{% set dc.contacted=dc.contacted+r.contacted %}{% set dc.q=dc.q+r.quotes_count %}{% set dc.a=dc.a+r.apps_count %}{% set dc.inf=dc.inf+r.inforce_count %}{% set dc.at=dc.at+r.appt_today %}{% set dc.af=dc.af+r.appt_future %}{% endfor %}
+<!-- ══ CHECKS ══ -->
+<div id="checks" class="panel">
+  {% set ck = namespace(asgn=0,cont=0,nc=0,bkd=0,q=0,ac=0,av=0,ic=0,iv=0,cbc=0,td=0,tf=0,tq=0,fd=0,ff=0,fq=0) %}
+  {% for r in checks_rows %}{% set ck.asgn=ck.asgn+r.assigned %}{% set ck.cont=ck.cont+r.contacted %}{% set ck.nc=ck.nc+r.not_contacted %}{% set ck.bkd=ck.bkd+r.booked %}{% set ck.q=ck.q+r.quotes_count %}{% set ck.ac=ck.ac+r.apps_count %}{% set ck.av=ck.av+r.apps_value %}{% set ck.ic=ck.ic+r.inforce_count %}{% set ck.iv=ck.iv+r.inforce_value %}{% set ck.cbc=ck.cbc+r.cbc %}{% set ck.td=ck.td+r.today_disc %}{% set ck.tf=ck.tf+r.today_fu %}{% set ck.tq=ck.tq+r.today_q %}{% set ck.fd=ck.fd+r.future_disc %}{% set ck.ff=ck.ff+r.future_fu %}{% set ck.fq=ck.fq+r.future_q %}{% endfor %}
 
   <div class="table-outer"><div class="table-scroll"><table>
-    <thead><tr>
-      {% macro dth(label,tip) %}<th><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
-      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
-      {{ dth("Contacted","Calls with a duration of 5 seconds or more.") }}
-      {{ dth("Quotes #","Distinct leads quoted in the selected period.") }}
-      {{ dth("Apps #","Applications created in the selected period.") }}
-      {{ dth("Inforce #","Apps completed (inforce) in the selected period.") }}
-      {{ dth("Today's Appts","Appointments scheduled for today from the CRM calendar (leads_leadschedule tasks).") }}
-      {{ dth("Future Appts","All appointments scheduled from tomorrow onwards in the CRM calendar.") }}
-    </tr></thead>
-    <tbody>
-      {% for r in daily_rows %}
-      <tr class="adviser-row" data-uid="{{ r.user_id }}">
+    <thead>
+      <tr>
+        <th style="min-width:180px" rowspan="2"><div class="th-inner">Adviser</div></th>
+        {% macro cth(label,tip) %}<th rowspan="2"><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
+        {{ cth("Assigned","Total leads assigned to this adviser in the period.") }}
+        {{ cth("Contacted","Calls with a duration of 45 seconds or more.") }}
+        {{ cth("Not Contacted","Calls with a duration of less than 45 seconds.") }}
+        {{ cth("Booked","Of assigned leads: received the Life Insurance Questions document.") }}
+        {{ cth("Quotes #","Distinct leads quoted in the selected period.") }}
+        {{ cth("Apps #","Applications created in the selected period.") }}
+        {{ cth("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD") }}
+        {{ cth("Inforce #","Apps completed (inforce) in the selected period.") }}
+        {{ cth("Inforce $","Cumulative commission for completed (inforce) apps.") }}
+        {{ cth("AVG CBC","Average 45s+ calls per closed lead (Won/Lost) before close.") }}
+        {{ cth("A→C %","Contacted ÷ Assigned × 100. Lead contact rate.") }}
+        {{ cth("C→B %","Booked ÷ Contacted × 100. Contact-to-book conversion.") }}
+        {{ cth("A→B %","Booked ÷ Assigned × 100. Overall conversion rate.") }}
+        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Today's Appts</div></th>
+        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Future Appts</div></th>
+      </tr>
+      <tr>
+        <th><div class="th-inner">Disc</div></th><th><div class="th-inner">F/U</div></th><th><div class="th-inner">Q</div></th>
+        <th><div class="th-inner">Disc</div></th><th><div class="th-inner">F/U</div></th><th><div class="th-inner">Q</div></th>
+      </tr>
+    </thead>
+    <tbody id="checks-tbody">
+      {% for r in checks_rows %}
+      <tr class="adviser-row" data-uid="{{ r.user_id }}"
+          data-assigned="{{ r.assigned }}" data-contacted="{{ r.contacted }}"
+          data-nc="{{ r.not_contacted }}" data-booked="{{ r.booked }}"
+          data-quotes="{{ r.quotes_count }}" data-apps="{{ r.apps_count }}" data-apps-val="{{ r.apps_value }}"
+          data-inf-count="{{ r.inforce_count }}" data-inf-val="{{ r.inforce_value }}"
+          data-cbc="{{ r.cbc }}"
+          data-td="{{ r.today_disc }}" data-tf="{{ r.today_fu }}" data-tq="{{ r.today_q }}"
+          data-fd="{{ r.future_disc }}" data-ff="{{ r.future_fu }}" data-fq="{{ r.future_q }}">
         <td><div class="avatar-cell">
           {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
           {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
           <span class="adviser-name">{{ r.name }}</span>
         </div></td>
+        <td>{% if r.assigned > 0 %}<a href="#" class="assigned-link" data-uid="{{ r.user_id }}">{{ r.assigned }}</a>{% else %}0{% endif %}</td>
         <td>{{ r.contacted }}</td>
+        <td>{{ r.not_contacted }}</td>
+        <td>{{ r.booked }}</td>
         <td>{{ r.quotes_count }}</td>
         <td>{{ r.apps_count }}</td>
+        <td>${{ "{:,.0f}".format(r.apps_value) }}</td>
         <td>{{ r.inforce_count }}</td>
-        <td>{{ r.appt_today }}</td>
-        <td>{{ r.appt_future }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot id="daily-total-row"><tr>
-      <td>Team Total</td>
-      <td>{{ daily_rows | sum(attribute='contacted') }}</td><td>{{ dc.q }}</td><td>{{ dc.a }}</td>
-      <td>{{ dc.inf }}</td><td>{{ dc.at }}</td><td>{{ dc.af }}</td>
-    </tr></tfoot>
-  </table></div></div>
-
-  <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Contacted</div></div><div class="chart-card-total" id="kpi-dc-called">—</div><div class="chart-card-sub">assigned leads contacted per day</div><div class="chart-wrap"><canvas id="chart-dc-called"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Quotes</div></div><div class="chart-card-total" id="kpi-dc-quotes">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-quotes"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Apps</div></div><div class="chart-card-total" id="kpi-dc-apps">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-apps"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce</div></div><div class="chart-card-total" id="kpi-dc-inforce">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-inforce"></canvas></div></div>
-  </div>
-</div><!-- /daily panel -->
-
-<!-- ══ LEADS TRACKER ══ -->
-<div id="pipeline" class="panel">
-  {% set pl = namespace(asgn=0,cont=0,nc=0,bkd=0,nb=0) %}
-  {% for r in pipeline_rows %}{% set pl.asgn=pl.asgn+r.assigned %}{% set pl.cont=pl.cont+r.contacted %}{% set pl.nc=pl.nc+r.no_contact %}{% set pl.bkd=pl.bkd+r.booked %}{% set pl.nb=pl.nb+r.not_booked %}{% endfor %}
-  <div class="table-outer"><div class="table-scroll"><table>
-    <thead><tr>
-      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
-      <th><div class="th-inner">Assigned<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Total leads assigned to this adviser in the period.</div></div></div></th>
-      <th><div class="th-inner">Contacted<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Calls with a duration of 5 seconds or more in the period.</div></div></div></th>
-      <th><div class="th-inner">No Contact<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Calls with a duration of less than 5 seconds — likely unanswered or hung up immediately.</div></div></div></th>
-      <th><div class="th-inner">Booked<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Of assigned leads: received the Life Insurance Questions document (anytime on that lead).</div></div></div></th>
-      <th><div class="th-inner">Not Booked<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Contacted leads that have not yet received the LIQ document.</div></div></div></th>
-      <th><div class="th-inner">A→C %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Contacted ÷ Assigned × 100. Lead contact rate.</div></div></div></th>
-      <th><div class="th-inner">C→B %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Booked ÷ Contacted × 100. Contact-to-book conversion.</div></div></div></th>
-      <th><div class="th-inner">A→B %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Booked ÷ Assigned × 100. Overall conversion rate.</div></div></div></th>
-    </tr></thead>
-    <tbody id="pipeline-tbody">
-      {% for r in pipeline_rows %}
-      <tr class="adviser-row" data-uid="{{ r.user_id }}">
-        <td><div class="avatar-cell">
-          {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
-          {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
-          <span class="adviser-name">{{ r.name }}</span>
-        </div></td>
-        <td>{{ r.assigned }}</td>
-        <td>{{ r.contacted }}</td>
-        <td>{{ r.no_contact }}</td>
-        <td>{{ r.booked }}</td>
-        <td>{{ r.not_booked }}</td>
+        <td>${{ "{:,.0f}".format(r.inforce_value) }}</td>
+        <td>{{ r.cbc }}</td>
         <td class="conv-cell">{{ r.conv_ac }}%</td>
         <td class="conv-cell">{{ r.conv_cb }}%</td>
         <td class="conv-cell">{{ r.conv_ab }}%</td>
+        <td>{{ r.today_disc }}</td><td>{{ r.today_fu }}</td><td>{{ r.today_q }}</td>
+        <td>{{ r.future_disc }}</td><td>{{ r.future_fu }}</td><td>{{ r.future_q }}</td>
       </tr>
       {% endfor %}
     </tbody>
-    <tfoot><tr>
+    <tfoot id="checks-total-row"><tr>
       <td>Team Total</td>
-      <td>{{ pl.asgn }}</td><td>{{ pl.cont }}</td><td>{{ pl.nc }}</td>
-      <td>{{ pl.bkd }}</td><td>{{ pl.nb }}</td>
-      <td class="conv-cell">{{ "{:.1f}".format(pl.cont/pl.asgn*100 if pl.asgn else 0) }}%</td>
-      <td class="conv-cell">{{ "{:.1f}".format(pl.bkd/pl.cont*100 if pl.cont else 0) }}%</td>
-      <td class="conv-cell">{{ "{:.1f}".format(pl.bkd/pl.asgn*100 if pl.asgn else 0) }}%</td>
+      <td>{{ ck.asgn }}</td><td>{{ ck.cont }}</td><td>{{ ck.nc }}</td><td>{{ ck.bkd }}</td>
+      <td>{{ ck.q }}</td><td>{{ ck.ac }}</td><td>${{ "{:,.0f}".format(ck.av) }}</td>
+      <td>{{ ck.ic }}</td><td>${{ "{:,.0f}".format(ck.iv) }}</td>
+      <td>{{ "{:.1f}".format(ck.cbc / checks_rows|length) if checks_rows|length else '0.0' }}</td>
+      <td class="conv-cell">{{ "{:.1f}".format(ck.cont/ck.asgn*100 if ck.asgn else 0) }}%</td>
+      <td class="conv-cell">{{ "{:.1f}".format(ck.bkd/ck.cont*100 if ck.cont else 0) }}%</td>
+      <td class="conv-cell">{{ "{:.1f}".format(ck.bkd/ck.asgn*100 if ck.asgn else 0) }}%</td>
+      <td>{{ ck.td }}</td><td>{{ ck.tf }}</td><td>{{ ck.tq }}</td>
+      <td>{{ ck.fd }}</td><td>{{ ck.ff }}</td><td>{{ ck.fq }}</td>
     </tr></tfoot>
   </table></div></div>
 
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Assigned</div></div><div class="chart-card-total" id="kpi-assigned">—</div><div class="chart-card-sub">leads assigned per day</div><div class="chart-wrap"><canvas id="chart-assigned"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Contacted</div></div><div class="chart-card-total" id="kpi-contacted">—</div><div class="chart-card-sub">calls ≥ 5 seconds per day</div><div class="chart-wrap"><canvas id="chart-contacted"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">No Contact</div></div><div class="chart-card-total" id="kpi-nocontact">—</div><div class="chart-card-sub">calls &lt; 5 seconds per day</div><div class="chart-wrap"><canvas id="chart-nocontact"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Booked</div></div><div class="chart-card-total" id="kpi-booked">—</div><div class="chart-card-sub">LIQ document sent</div><div class="chart-wrap"><canvas id="chart-booked"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Applications $</div></div><div class="chart-card-total" id="kpi-checks-apps">—</div><div class="chart-card-sub">cumulative application commission</div><div class="chart-wrap"><canvas id="chart-checks-apps"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-checks-inf"></span></div><div class="chart-card-total" id="kpi-checks-inf">—</div><div class="chart-card-sub">cumulative inforce commission</div><div class="chart-wrap"><canvas id="chart-checks-inf"></canvas></div></div>
   </div>
-</div><!-- /pipeline panel -->
+</div><!-- /checks panel -->
 <div id="perf" class="panel">
-  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0,ipd=0,aipd=0) %}
-  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% set t.ipd=t.ipd+r.inf_per_day %}{% set t.aipd=t.aipd+r.avg_inf_day %}{% endfor %}
+  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0,asgn=0,rp=0,rt=0) %}
+  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% set t.asgn=t.asgn+r.assigned %}{% set t.rp=t.rp+r.remed_pending %}{% set t.rt=t.rt+r.remed_total %}{% endfor %}
 
   <div class="legend">
     <span class="legend-item"><span class="beacon beacon-on"></span>On target</span>
@@ -514,38 +596,48 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 
   <div class="table-outer"><div class="table-scroll"><table>
-    <thead><tr>
-      {% macro th(label,tip,cg='') %}<th {% if cg %}data-cg="{{ cg }}"{% endif %}><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
+    <thead>
+      {% macro th2(label,tip,cg='') %}<th {% if cg %}data-cg="{{ cg }}"{% endif %}><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
+      <tr>
       <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
       <th><div class="th-inner">Days<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Business days where adviser made at least 1 call or sent at least 1 quote.</div></div></div></th>
-      {{ th("Talk Time","Total call duration via noojee_callrecord.","b") }}
-      {{ th("Talk / Day","Total talk time ÷ days worked. Threshold-highlighted.","b") }}
-      {{ th("Quotes #","Distinct leads quoted (last quote per lead).","c") }}
-      {{ th("Quote Total $","Sum of last quote value per lead in period.","c") }}
-      {{ th("Quote Avg $","Quote Total ÷ Quotes count.","c") }}
-      {{ th("Quotes / Day","Quotes ÷ days worked. Threshold-highlighted.","c") }}
-      {{ th("Apps #","Applications created in period.","d") }}
-      {{ th("Apps $","Sum of application premium in period.","d") }}
-      {{ th("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
-      {{ th("Q-App %","Apps ÷ Quotes × 100.","d") }}
-      {{ th("Inforce #","Apps completed in period.","d") }}
-      {{ th("Inforce $","Sum of premium for completed apps. Threshold-highlighted.","d") }}
-      {{ th("Inf / Day","Inforce count ÷ total business days.","d") }}
-      {{ th("Avg Inf/Day $","Inforce value ÷ total business days.","d") }}
-    </tr></thead>
+      {{ th2("Remed","Total remediations in period. Click to view details.") }}
+      {{ th2("Assigned","Total leads assigned to this adviser in the period.") }}
+      {{ th2("Talk Time","Total call duration via noojee_callrecord.","b") }}
+      {{ th2("Talk / Day","Total talk time ÷ days worked. Threshold-highlighted.","b") }}
+      {{ th2("Quotes #","Distinct leads quoted (last quote per lead).","c") }}
+      {{ th2("Quote Total $","Sum of last quote value per lead in period.","c") }}
+      {{ th2("Quote Avg $","Quote Total ÷ Quotes count.","c") }}
+      {{ th2("Quotes / Day","Quotes ÷ days worked. Threshold-highlighted.","c") }}
+      {{ th2("Apps #","Applications created in period.","d") }}
+      {{ th2("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD","d") }}
+      {{ th2("APPS AVG $","Application commission ÷ number of applications.","d") }}
+      {{ th2("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
+      {{ th2("Q-App %","Apps ÷ Quotes × 100.","d") }}
+      {{ th2("Inforce #","Apps completed in period.","d") }}
+      {{ th2("Inforce $","Cumulative commission for completed (inforce) apps. Threshold-highlighted.","d") }}
+      </tr>
+    </thead>
     <tbody id="perf-tbody">
       {% for r in perf_rows %}
       <tr class="adviser-row" data-uid="{{ r.user_id }}"
+          data-days="{{ r.days_worked }}" data-assigned="{{ r.assigned }}"
+          data-talk-s="{{ r.talk_time_s }}" data-talk-pd-s="{{ r.talk_per_day_s }}"
           data-talk-mins="{{ (r.talk_per_day.split(':')[0]|int*60+r.talk_per_day.split(':')[1]|int) if ':' in r.talk_per_day else 0 }}"
+          data-quotes="{{ r.quotes_count }}" data-quote-val="{{ r.quote_total }}"
           data-qpd="{{ r.quotes_per_day }}"
+          data-apps="{{ r.apps_count }}" data-apps-val="{{ r.apps_value }}"
           data-apd="{{ r.apps_per_day }}"
-          data-inf="{{ r.inforce_value }}">
+          data-inf-count="{{ r.inforce_count }}" data-inf="{{ r.inforce_value }}"
+          data-remed-total="{{ r.remed_total }}">
         <td><div class="avatar-cell">
           {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
           {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
           <span class="adviser-name">{{ r.name }}</span>
         </div></td>
         <td>{{ r.days_worked }}</td>
+        <td>{% if r.remed_total > 0 %}<a href="#" class="remed-pending-link" data-uid="{{ r.user_id }}" style="color:var(--orange);font-weight:600;text-decoration:underline;cursor:pointer">{{ r.remed_total }}</a>{% else %}0{% endif %}</td>
+        <td>{% if r.assigned > 0 %}<a href="#" class="assigned-link" data-uid="{{ r.user_id }}">{{ r.assigned }}</a>{% else %}0{% endif %}</td>
         <td data-cg="b">{{ r.talk_time }}</td>
         <td data-cg="b"><span class="badge badge-{{ r.talk_color }}" data-badge="talk">{{ r.talk_per_day }}</span></td>
         <td data-cg="c">{{ r.quotes_count }}</td>
@@ -554,12 +646,11 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         <td data-cg="c"><span class="badge badge-{{ r.quotes_color }}" data-badge="qpd">{{ r.quotes_per_day }}</span></td>
         <td data-cg="d">{{ r.apps_count }}</td>
         <td data-cg="d">${{ "{:,.0f}".format(r.apps_value) }}</td>
+        <td data-cg="d">${{ "{:,.0f}".format(r.apps_avg) }}</td>
         <td data-cg="d"><span class="badge badge-{{ r.apps_color }}" data-badge="apd">{{ r.apps_per_day }}</span></td>
         <td data-cg="d">{{ r.q2a_pct }}%</td>
         <td data-cg="d">{{ r.inforce_count }}</td>
         <td data-cg="d"><span class="badge badge-{{ r.inforce_color }}" data-badge="inf">${{ "{:,.0f}".format(r.inforce_value) }}</span></td>
-        <td data-cg="d">{{ r.inf_per_day }}</td>
-        <td data-cg="d">${{ "{:,.0f}".format(r.avg_inf_day) }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -569,20 +660,20 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       data-apd="{{ '{:.1f}'.format(t.apd/t.n if t.n else 0) }}"
       data-inf="{{ t.ival }}"><tr>
       <td>Team Total</td><td>{{ t.days }}</td>
+      <td>{{ t.rt }}</td>
+      <td>{{ t.asgn }}</td>
       <td data-cg="b">{% if t.talk_total_s %}{{ "%d:%02d:%02d"|format((t.talk_total_s//3600)|int,((t.talk_total_s%3600)//60)|int,(t.talk_total_s%60)|int) }}{% else %}—{% endif %}</td>
       <td data-cg="b">{% if t.n %}{% set avg_talk_s = t.talk_s / t.n %}{{ "%d:%02d"|format((avg_talk_s//3600)|int, ((avg_talk_s%3600)//60)|int) }}{% else %}—{% endif %}</td>
       <td data-cg="c">{{ t.q }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval) }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval/t.q if t.q else 0) }}</td><td data-cg="c">{{ "{:.1f}".format(t.qpd / t.n if t.n else 0) }}</td>
-      <td data-cg="d">{{ t.apps }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ t.apps }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval) }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval/t.apps if t.apps else 0) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
       <td data-cg="d">{{ "{:.1f}".format(t.apps/t.q*100 if t.q else 0) }}%</td>
-      <td data-cg="d">{{ t.inf }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td><td data-cg="d">{{ "{:.1f}".format(t.ipd / t.n if t.n else 0) }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aipd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ t.inf }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td>
     </tr></tfoot>
   </table></div></div>
 
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Talk / Day</div><span class="beacon" id="beacon-talk"></span></div><div class="chart-card-total" id="kpi-talk">—</div><div class="chart-card-sub" id="sub-talk">avg per day</div><div class="chart-wrap"><canvas id="chart-talk"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Quotes / Day</div><span class="beacon" id="beacon-qpd"></span></div><div class="chart-card-total" id="kpi-qpd">—</div><div class="chart-card-sub" id="sub-qpd">avg per day</div><div class="chart-wrap"><canvas id="chart-qpd"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Apps / Day</div><span class="beacon" id="beacon-apd"></span></div><div class="chart-card-total" id="kpi-apd">—</div><div class="chart-card-sub" id="sub-apd">avg per day</div><div class="chart-wrap"><canvas id="chart-apd"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-inf"></span></div><div class="chart-card-total" id="kpi-inf">—</div><div class="chart-card-sub" id="sub-inf">total inforce premium</div><div class="chart-wrap"><canvas id="chart-inf"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Applications $</div></div><div class="chart-card-total" id="kpi-perf-apps">—</div><div class="chart-card-sub">cumulative application commission</div><div class="chart-wrap"><canvas id="chart-perf-apps"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-perf-inf"></span></div><div class="chart-card-total" id="kpi-perf-inf">—</div><div class="chart-card-sub">cumulative inforce commission</div><div class="chart-wrap"><canvas id="chart-perf-inf"></canvas></div></div>
   </div>
 </div>
 
@@ -604,29 +695,10 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 
       <div class="modal-section-title">Targets</div>
 
-      <div class="tgt-line-row">
-        <div class="tgt-field"><label>Talk / Day</label><input type="number" id="t-talk-tgt" min="0" step="5" placeholder="150"><div class="tgt-hint">Default 150 (2h 30m)</div></div>
-        <div class="tgt-row-bottom">
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-talk-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="talk-line-color-preview"><input type="color" id="t-talk-line-color" oninput="previewTgtColor('talk-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="talk-tgt-color-preview"><input type="color" id="t-talk-tgt-color" oninput="previewTgtColor('talk-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="talk-avg-color-preview"><input type="color" id="t-talk-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
-        </div>
-      </div>
-      <div class="tgt-line-row">
-        <div class="tgt-field"><label>Quotes / Day</label><input type="number" id="t-q-tgt" min="0" step="1" placeholder="6"><div class="tgt-hint">Default 6</div></div>
-        <div class="tgt-row-bottom">
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-q-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-q" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="q-line-color-preview"><input type="color" id="t-q-line-color" oninput="previewTgtColor('q-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="q-tgt-color-preview"><input type="color" id="t-q-tgt-color" oninput="previewTgtColor('q-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="q-avg-color-preview"><input type="color" id="t-q-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
-        </div>
-      </div>
-      <div class="tgt-line-row">
-        <div class="tgt-field"><label>Apps / Day</label><input type="number" id="t-a-tgt" min="0" step="0.5" placeholder="2"><div class="tgt-hint">Default 2</div></div>
-        <div class="tgt-row-bottom">
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-a-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-a" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="a-line-color-preview"><input type="color" id="t-a-line-color" oninput="previewTgtColor('a-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="a-tgt-color-preview"><input type="color" id="t-a-tgt-color" oninput="previewTgtColor('a-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="a-avg-color-preview"><input type="color" id="t-a-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
-        </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+        <div class="tgt-field" style="flex:1;min-width:120px"><label>Talk / Day</label><input type="number" id="t-talk-tgt" min="0" step="5" placeholder="150"><div class="tgt-hint">Default 150 (2h 30m)</div></div>
+        <div class="tgt-field" style="flex:1;min-width:120px"><label>Quotes / Day</label><input type="number" id="t-q-tgt" min="0" step="1" placeholder="6"><div class="tgt-hint">Default 6</div></div>
+        <div class="tgt-field" style="flex:1;min-width:120px"><label>Apps / Day</label><input type="number" id="t-a-tgt" min="0" step="0.5" placeholder="2"><div class="tgt-hint">Default 2</div></div>
       </div>
       <div class="tgt-line-row">
         <div class="tgt-field"><label>Inforce $ / Month — Per Adviser</label>
@@ -637,8 +709,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         </div>
         <div class="tgt-row-bottom">
           <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-inf-tgt-show"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show target line</span></div>
-          <div class="toggle-wrap"><label class="toggle"><input type="checkbox" id="t-show-avg-inf" onchange="rebuildCharts();"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Show avg line</span></div>
-          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="inf-line-color-preview"><input type="color" id="t-inf-line-color" oninput="previewTgtColor('inf-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="inf-tgt-color-preview"><input type="color" id="t-inf-tgt-color" oninput="previewTgtColor('inf-tgt',this.value)"></div><span class="tgt-color-label">Avg</span><div class="color-preview" id="inf-avg-color-preview"><input type="color" id="t-inf-avg-color" oninput="['talk','q','a','inf'].forEach(x=>{document.getElementById('t-'+x+'-avg-color').value=this.value;previewTgtColor(x+'-avg',this.value);})"></div></div>
+          <div class="tgt-color-group"><span class="tgt-color-label">Line</span><div class="color-preview" id="inf-line-color-preview"><input type="color" id="t-inf-line-color" oninput="previewTgtColor('inf-line',this.value)"></div><span class="tgt-color-label">Target</span><div class="color-preview" id="inf-tgt-color-preview"><input type="color" id="t-inf-tgt-color" oninput="previewTgtColor('inf-tgt',this.value)"></div></div>
         </div>
       </div>
 
@@ -678,6 +749,12 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       <!-- BELOW TARGET -->
       <div class="thr-block">
         <div class="thr-header"><div class="thr-label"><span class="beacon beacon-below" style="animation:none"></span>Below target</div></div>
+        <div class="thr-inputs-row">
+          <div class="thr-field-narrow"><label>Talk ≥ (mins)</label><input type="number" id="thr-talk-below" min="0" step="5"></div>
+          <div class="thr-field-narrow"><label>Quotes/Day ≥</label><input type="number" id="thr-q-below" min="0" step="1"></div>
+          <div class="thr-field-narrow"><label>Apps/Day ≥</label><input type="number" id="thr-a-below" min="0" step="0.5"></div>
+          <div class="thr-field-narrow"><label>Inforce $ ≥</label><input type="number" id="thr-inf-below" min="0" step="1000"></div>
+        </div>
         <div class="thr-bottom-row">
           <div class="thr-color-wrap"><div class="color-preview" id="below-color-preview"><input type="color" id="thr-below-color" oninput="previewColor('below',this.value)"></div><span id="below-color-hex" style="font-size:11px;color:var(--g500);font-family:monospace"></span></div>
           <div class="thr-enabled-row"><label class="toggle"><input type="checkbox" id="thr-below-enabled"><span class="toggle-track"></span><span class="toggle-thumb"></span></label><span class="toggle-label">Enabled</span></div>
@@ -693,6 +770,92 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 </div>
 
+<!-- ══ REMEDIATION SLIDE-IN PANEL ══ -->
+<div class="remed-backdrop" id="remed-backdrop" onclick="closeRemed()"></div>
+<div class="remed-panel" id="remed-panel">
+  <div class="remed-panel-header">
+    <div class="remed-panel-header-top">
+      <div>
+        <div class="remed-panel-title" id="remed-panel-title">Remediations</div>
+        <div class="remed-panel-sub" id="remed-panel-sub"></div>
+      </div>
+      <button class="remed-panel-close" onclick="closeRemed()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="remed-tabs">
+      <button class="remed-tab active" data-remed-tab="pending" onclick="switchRemedTab('pending')">Pending <span class="remed-tab-count" id="remed-cnt-pending">0</span></button>
+      <button class="remed-tab" data-remed-tab="resolved" onclick="switchRemedTab('resolved')">Resolved <span class="remed-tab-count" id="remed-cnt-resolved">0</span></button>
+    </div>
+  </div>
+  <div class="remed-toolbar">
+    <button class="remed-sort-btn" id="remed-sort-btn" onclick="toggleRemedSort()">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 5l4-3 4 3M4 11l4 3 4-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="remed-sort-label">Oldest first</span>
+    </button>
+    <select class="remed-filter" id="remed-filter" onchange="applyRemedFilter()">
+      <option value="">All types</option>
+    </select>
+  </div>
+  <div class="remed-panel-body" id="remed-panel-body"></div>
+</div>
+
+<!-- ══ ASSIGNED LEADS SLIDE-IN PANEL ══ -->
+<div class="remed-backdrop" id="assigned-backdrop" onclick="closeAssigned()"></div>
+<div class="remed-panel" id="assigned-panel">
+  <div class="remed-panel-header">
+    <div class="remed-panel-header-top">
+      <div>
+        <div class="remed-panel-title" id="assigned-panel-title">Assigned Leads</div>
+        <div class="remed-panel-sub" id="assigned-panel-sub"></div>
+      </div>
+      <button class="remed-panel-close" onclick="closeAssigned()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="remed-tabs">
+      <button class="remed-tab active" data-assigned-tab="active" onclick="switchAssignedTab('active')">Active <span class="remed-tab-count" id="assigned-cnt-active">0</span></button>
+      <button class="remed-tab" data-assigned-tab="closed" onclick="switchAssignedTab('closed')">Closed <span class="remed-tab-count" id="assigned-cnt-closed">0</span></button>
+    </div>
+  </div>
+  <div class="remed-toolbar">
+    <button class="remed-sort-btn" id="assigned-sort-btn" onclick="toggleAssignedSort()">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 5l4-3 4 3M4 11l4 3 4-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="assigned-sort-label">Oldest first</span>
+    </button>
+    <select class="remed-filter" id="assigned-filter" onchange="applyAssignedFilter()">
+      <option value="">All statuses</option>
+    </select>
+  </div>
+  <div class="remed-panel-body" id="assigned-panel-body"></div>
+</div>
+
+<!-- ══ UNASSIGNED LEADS SLIDE-IN PANEL ══ -->
+<div class="remed-backdrop" id="unassigned-backdrop" onclick="closeUnassigned()"></div>
+<div class="remed-panel" id="unassigned-panel">
+  <div class="remed-panel-header">
+    <div class="remed-panel-header-top">
+      <div>
+        <div class="remed-panel-title" id="unassigned-panel-title">Unassigned Leads</div>
+        <div class="remed-panel-sub" id="unassigned-panel-sub"></div>
+      </div>
+      <button class="remed-panel-close" onclick="closeUnassigned()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="remed-toolbar">
+    <button class="remed-sort-btn" id="unassigned-sort-btn" onclick="toggleUnassignedSort()">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 5l4-3 4 3M4 11l4 3 4-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="unassigned-sort-label">Oldest first</span>
+    </button>
+    <select class="remed-filter" id="unassigned-filter" onchange="applyUnassignedFilter()">
+      <option value="">All statuses</option>
+    </select>
+  </div>
+  <div class="remed-panel-body" id="unassigned-panel-body"></div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <svg class="toast-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L14 13H2L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3M8 10.5h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -704,9 +867,15 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 <script>
 // ── Flask data ──
 const dates           = {{ dates_list | tojson }};
-const MONTHS          = {{ months }};  // period length in months (biz_days/20)
-const TEAM_AVGS       = {{ team_avgs | tojson }};  // server-computed, matches tfoot exactly
+const MONTHS          = {{ months }};
+const TEAM_AVGS       = {{ team_avgs | tojson }};
 const allAdvisers     = {{ chart_advisers | tojson }};
+const checksRawData   = {{ checks_rows | tojson }};
+const remedDetails    = {{ remed_details | tojson }};
+const assignedDetails = {{ assigned_details | tojson }};
+const unassignedLeads = {{ unassigned_leads | tojson }};
+const LEAD_STATUS     = {{ lead_status | tojson }};
+const CRM_BASE        = "{{ crm_base_url }}";
 // Build per-adviser inforce target inputs inside modal
 (function(){
   const wrap = document.getElementById('inf-tgt-adviser-inputs');
@@ -720,8 +889,14 @@ const allAdvisers     = {{ chart_advisers | tojson }};
     </div>`;
   });
 })();
-const allPipeAdvisers = {{ pipeline_chart_advisers | tojson }};
-const selectedAdviser = "{{ selected_adviser }}";
+
+// ── Multi-select: parse initial selection from hidden input ──
+const selectedAdvisers = new Set();
+(function(){
+  const val = document.getElementById('adviser-input').value;
+  if(val) val.split(',').forEach(id=>{ const n=parseInt(id); if(!isNaN(n)) selectedAdvisers.add(n); });
+})();
+
 const QF = {
   d0:{start:"{{ d0_start }}",end:"{{ d0_end }}"},
   d1:{start:"{{ d1_start }}",end:"{{ d1_end }}"},
@@ -733,15 +908,13 @@ const QF = {
 
 // ── Targets ──
 const DEFAULTS={
-  talkTgt:150,showTalkTgt:true,qTgt:6,showQTgt:true,aTgt:2,showATgt:true,
-  infTgts:{181:20000,182:20000,183:20000,152:20000},showInfTgt:true,
-  showAvgTalk:true,showAvgQ:true,showAvgA:true,showAvgInf:true,avgLineColor:'#7f56d9',
-  talkLineColor:'#7f56d9',qLineColor:'#7f56d9',aLineColor:'#7f56d9',infLineColor:'#7f56d9',
-  talkTgtColor:'#12B76A',qTgtColor:'#12B76A',aTgtColor:'#12B76A',infTgtColor:'#12B76A',
-  talkOn:150,talkNear:120,qOn:6,qNear:4,aOn:2,aNear:1,infOn:20000,infNear:15000,
+  talkTgt:150,qTgt:6,aTgt:2,
+  infTgts:{181:20000,182:20000,183:20000,152:20000,53:20000},showInfTgt:true,
+  aLineColor:'#7f56d9',infLineColor:'#7f56d9',infTgtColor:'#12B76A',
+  talkOn:150,talkNear:120,talkBelow:0,qOn:6,qNear:4,qBelow:0,aOn:2,aNear:1,aBelow:0,infOn:20000,infNear:15000,infBelow:0,
   onColor:'#12B76A',onEnabled:true,nearColor:'#EAB308',nearEnabled:true,belowColor:'#B42318',belowEnabled:true,
 };
-// ── Settings: load from server on page load, fall back to DEFAULTS ──────────
+// ── Settings: load from server on page load, fall back to DEFAULTS ──
 let T = {...DEFAULTS};
 (function(){
   const xhr = new XMLHttpRequest();
@@ -782,7 +955,7 @@ function showTab(id,el){
 }
 (function(){
   const raw="{{ active_tab }}";
-  const id=(raw==='perf'||raw==='daily'||raw==='pipeline')?raw:'perf';
+  const id=(raw==='perf'||raw==='checks')?raw:'perf';
   const te=document.getElementById('tab-'+id),pe=document.getElementById(id);
   if(te&&pe){te.classList.add('active');pe.classList.add('active');}
   else{document.getElementById('tab-perf').classList.add('active');document.getElementById('perf').classList.add('active');}
@@ -793,9 +966,10 @@ function showLoading(){document.getElementById('loading-overlay').classList.add(
 
 // ── Auto-submit ──
 function submitForm(){showLoading();document.getElementById('filter-form').submit();}
+
 // ── Date popover ──
-const TODAY_STR = "{{ today_iso }}";   // today (max allowed date)
-const MIN_STR = "{{ min_date }}";     // earliest allowed date
+const TODAY_STR = "{{ today_iso }}";
+const MIN_STR = "{{ min_date }}";
 
 function toggleDatePicker(){
   const p=document.getElementById('date-popover');
@@ -823,9 +997,7 @@ function validatePopDates(){
   warn.style.display='none';return true;
 }
 ['pop-start','pop-end'].forEach(id=>{
-  document.getElementById(id).addEventListener('change',()=>{
-    validatePopDates();
-  });
+  document.getElementById(id).addEventListener('change',()=>{ validatePopDates(); });
 });
 
 function fmtDateLabel(iso){const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
@@ -841,8 +1013,7 @@ function applyDatePicker(){
   ['d0','d1','w0','w1','m0','m1'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
   submitForm();
 }
-
-// Close popover on outside click
+// Close date popover on outside click
 document.addEventListener('click',e=>{
   const pop=document.getElementById('date-popover');
   const btn=document.getElementById('period-btn');
@@ -859,7 +1030,27 @@ function showToast(msg){
   toastTimer=setTimeout(()=>t.classList.remove('show'),4000);
 }
 
-document.getElementById('adviser-select').addEventListener('change',submitForm);
+// ── Multi-select dropdown ──
+function toggleAdviserDD(){
+  const panel=document.getElementById('ms-panel');
+  panel.classList.toggle('open');
+}
+function msApply(){
+  const checked=[...document.querySelectorAll('.ms-adv:checked')].map(cb=>cb.value);
+  if(!checked.length){alert('Select at least one adviser');return;}
+  document.getElementById('adviser-input').value=checked.join(',');
+  document.getElementById('ms-panel').classList.remove('open');
+  submitForm();
+}
+// Close adviser dropdown on outside click
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('adviser-dropdown');
+  if(dd && !dd.contains(e.target)){
+    document.getElementById('ms-panel').classList.remove('open');
+  }
+});
+
+// ── Quick filter ──
 function setQF(key){
   const f=QF[key];
   document.getElementById('start-input').value=f.start;
@@ -874,15 +1065,65 @@ function setQF(key){
   ['d0','d1','w0','w1','m0','m1'].forEach(k=>{if(QF[k].start===s&&QF[k].end===e)document.getElementById('qf-'+k).classList.add('active-filter');});
 })();
 
-// ── Row filter ──
-(function(){
+// ── Row filter (multi-select) + dynamic footer recalculation ──
+function filterRows(){
   document.querySelectorAll('.adviser-row').forEach(r=>{
-    r.style.display=(selectedAdviser==='team'||r.dataset.uid===selectedAdviser)?'':'none';
+    r.style.display=selectedAdvisers.has(parseInt(r.dataset.uid))?'':'none';
   });
-  ['team-total-row','daily-total-row'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display=selectedAdviser==='team'?'':'none';
-  });
-})();
+  recalcPerfFooter();
+  recalcChecksFooter();
+}
+
+function recalcPerfFooter(){
+  const tfoot=document.getElementById('team-total-row');
+  if(!tfoot) return;
+  const vis=[...document.querySelectorAll('#perf-tbody .adviser-row')].filter(r=>r.style.display!=='none');
+  const n=vis.length;
+  if(!n){tfoot.style.display='none';return;}
+  tfoot.style.display='';
+  const sum=k=>vis.reduce((s,r)=>s+(parseFloat(r.dataset[k])||0),0);
+  const days=sum('days'),asgn=sum('assigned'),talkS=sum('talkS'),talkPdS=sum('talkPdS');
+  const quotes=sum('quotes'),quoteVal=sum('quoteVal'),apps=sum('apps'),appsVal=sum('appsVal');
+  const infCount=sum('infCount'),infVal=sum('inf'),remT=sum('remedTotal');
+  const avgTalkPd=talkPdS/n, avgQpd=sum('qpd')/n, avgApd=sum('apd')/n;
+  const quoteAvg=quotes?quoteVal/quotes:0, appsAvg=apps?appsVal/apps:0, q2a=quotes?apps/quotes*100:0;
+  const fHMS=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=Math.floor(s%60);return h+':'+String(m).padStart(2,'0')+':'+String(sc).padStart(2,'0');};
+  const fHM=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h+':'+String(m).padStart(2,'0');};
+  const fD=v=>'$'+v.toLocaleString('en-AU',{maximumFractionDigits:0});
+  const c=tfoot.querySelectorAll('tr td');
+  c[0].textContent='Team Total';c[1].textContent=days;c[2].textContent=remT;c[3].textContent=asgn;
+  c[4].textContent=talkS?fHMS(talkS):'—';c[5].textContent=fHM(avgTalkPd);
+  c[6].textContent=quotes;c[7].textContent=fD(quoteVal);c[8].textContent=fD(quoteAvg);c[9].textContent=avgQpd.toFixed(1);
+  c[10].textContent=apps;c[11].textContent=fD(appsVal);c[12].textContent=fD(appsAvg);c[13].textContent=avgApd.toFixed(1);
+  c[14].textContent=q2a.toFixed(1)+'%';c[15].textContent=infCount;c[16].textContent=fD(infVal);
+  tfoot.dataset.talkMins=Math.floor(avgTalkPd/60);
+  tfoot.dataset.qpd=avgQpd.toFixed(1);tfoot.dataset.apd=avgApd.toFixed(1);tfoot.dataset.inf=infVal;
+}
+
+function recalcChecksFooter(){
+  const tfoot=document.getElementById('checks-total-row');
+  if(!tfoot) return;
+  const vis=[...document.querySelectorAll('#checks-tbody .adviser-row')].filter(r=>r.style.display!=='none');
+  const n=vis.length;
+  if(!n){tfoot.style.display='none';return;}
+  tfoot.style.display='';
+  const sum=k=>vis.reduce((s,r)=>s+(parseFloat(r.dataset[k])||0),0);
+  const asgn=sum('assigned'),cont=sum('contacted'),nc=sum('nc'),bkd=sum('booked');
+  const q=sum('quotes'),ac=sum('apps'),av=sum('appsVal'),ic=sum('infCount'),iv=sum('infVal');
+  const cbcAvg=n?(sum('cbc')/n).toFixed(1):'0.0';
+  const td=sum('td'),tf=sum('tf'),tq=sum('tq'),fd=sum('fd'),ff=sum('ff'),fq=sum('fq');
+  const fD=v=>'$'+v.toLocaleString('en-AU',{maximumFractionDigits:0});
+  const c=tfoot.querySelectorAll('tr td');
+  c[0].textContent='Team Total';c[1].textContent=asgn;c[2].textContent=cont;c[3].textContent=nc;c[4].textContent=bkd;
+  c[5].textContent=q;c[6].textContent=ac;c[7].textContent=fD(av);c[8].textContent=ic;c[9].textContent=fD(iv);
+  c[10].textContent=cbcAvg;
+  c[11].textContent=(asgn?(cont/asgn*100).toFixed(1):'0.0')+'%';
+  c[12].textContent=(cont?(bkd/cont*100).toFixed(1):'0.0')+'%';
+  c[13].textContent=(asgn?(bkd/asgn*100).toFixed(1):'0.0')+'%';
+  c[14].textContent=td;c[15].textContent=tf;c[16].textContent=tq;
+  c[17].textContent=fd;c[18].textContent=ff;c[19].textContent=fq;
+}
+filterRows();
 
 // ── Tooltip ──
 function posTip(icon){
@@ -895,11 +1136,12 @@ function posTip(icon){
 
 // ── Badge refresh ──
 function badgeClass(metric,value){
-  const onV ={talk:T.talkOn,qpd:T.qOn,apd:T.aOn,inf:T.infOn*MONTHS}[metric];
-  const nearV={talk:T.talkNear,qpd:T.qNear,apd:T.aNear,inf:T.infNear*MONTHS}[metric];
-  if(T.onEnabled   &&value>=onV)  return 'badge badge-on';
-  if(T.nearEnabled &&value>=nearV)return 'badge badge-near';
-  if(T.belowEnabled)              return 'badge badge-below';
+  const onV   ={talk:T.talkOn,qpd:T.qOn,apd:T.aOn,inf:T.infOn*MONTHS}[metric];
+  const nearV ={talk:T.talkNear,qpd:T.qNear,apd:T.aNear,inf:T.infNear*MONTHS}[metric];
+  const belowV={talk:T.talkBelow,qpd:T.qBelow,apd:T.aBelow,inf:T.infBelow*MONTHS}[metric];
+  if(T.onEnabled   &&value>=onV)   return 'badge badge-on';
+  if(T.nearEnabled &&value>=nearV) return 'badge badge-near';
+  if(T.belowEnabled&&value>=belowV)return 'badge badge-below';
   return 'badge badge-neutral';
 }
 function refreshBadges(){
@@ -932,8 +1174,7 @@ let labels;
 if(CHART_MODE==='hourly'){
   labels=dates.map(h=>{const hr=parseInt(h);return hr===0?'12am':hr<12?hr+'am':hr===12?'12pm':(hr-12)+'pm';});
 }else if(CHART_MODE==='weekly'){
-  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  labels=dates.map(d=>dayNames[new Date(d+'T00:00:00').getDay()]);
+  labels=dates.map(d=>{const dn=new Date(d+'T00:00:00').getDay();return['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dn];});
 }else{
   labels=dates.map(d=>{const p=d.split('-');return p[2]+'/'+p[1];});
 }
@@ -981,28 +1222,25 @@ function buildLine(cid,data,name,yFmt,tgtVal,showTgt,lineColor,tgtColor,avgVal,a
   }});
 }
 
-function getPerfS(){
-  if(selectedAdviser==='team'){
-    const n=allAdvisers.length||1;
-    return{name:'Team Avg',
-      talk_mins:  dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.talk_mins[i]||0),0)/n),
-      quotes_cnt: dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.quotes_cnt[i]||0),0)/n),
-      apps_cnt:   dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.apps_cnt[i]||0),0)/n),
-      inforce_val:dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.inforce_val[i]||0),0)), // inforce stays as team total
-      calls_cnt:  dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.calls_cnt[i]||0),0)/n),
-    };
-  }
-  const uid=parseInt(selectedAdviser);
-  return allAdvisers.find(a=>a.uid===uid)||{name:'—',talk_mins:[],quotes_cnt:[],apps_cnt:[],inforce_val:[],calls_cnt:[]};
+// ── Cumulative helper ──
+function cumulative(arr){
+  return arr.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc;},[]);
 }
-function getPipeS(){
-  if(selectedAdviser==='team'){
-    const ks=['assigned','contacted','no_contact','booked'],agg={};
-    ks.forEach(k=>agg[k]=dates.map((_,i)=>allPipeAdvisers.reduce((s,a)=>s+(a[k][i]||0),0)));
-    return{name:'Team',...agg};
-  }
-  const uid=parseInt(selectedAdviser);
-  return allPipeAdvisers.find(a=>a.uid===uid)||{name:'—',assigned:[],contacted:[],no_contact:[],booked:[]};
+
+// ── Aggregation: multi-select aware ──
+function getPerfS(){
+  const chosen = allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
+  if(!chosen.length) return{name:'—',talk_mins:[],quotes_cnt:[],apps_cnt:[],apps_val:[],inforce_val:[],calls_cnt:[]};
+  const n=chosen.length;
+  return{
+    name: n===1 ? chosen[0].name : 'Team',
+    talk_mins:   dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.talk_mins[i]||0),0)/n),
+    quotes_cnt:  dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.quotes_cnt[i]||0),0)/n),
+    apps_cnt:    dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.apps_cnt[i]||0),0)/n),
+    apps_val:    dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.apps_val[i]||0),0)),
+    inforce_val: dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.inforce_val[i]||0),0)),
+    calls_cnt:   dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.calls_cnt[i]||0),0)/n),
+  };
 }
 
 function fmtMins(m){const h=Math.floor(m/60),mn=Math.round(m%60);return h+':'+String(mn).padStart(2,'0');}
@@ -1012,102 +1250,62 @@ function total(arr){return arr.reduce((s,v)=>s+v,0);}
 
 function rebuildCharts(){
   applyCSS();
-  const ps=getPerfS(),pip=getPipeS();
+  const ps=getPerfS();
 
-  // Daily checks charts — use same line colour as performance tab
-  const dcLC=T.talkLineColor;
-  buildLine('chart-dc-called',ps.calls_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
-  document.getElementById('kpi-dc-called').textContent=total(ps.calls_cnt);
-  buildLine('chart-dc-quotes',ps.quotes_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
-  document.getElementById('kpi-dc-quotes').textContent=total(ps.quotes_cnt);
-  buildLine('chart-dc-apps',ps.apps_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
-  document.getElementById('kpi-dc-apps').textContent=total(ps.apps_cnt);
-  buildLine('chart-dc-inforce',ps.inforce_val,ps.name,fmtMoney,null,false,dcLC);
-  document.getElementById('kpi-dc-inforce').textContent=fmtMoney(total(ps.inforce_val));
-  // Appts — scalar counts from server (not time-series)
-  const dcAt={{ daily_rows | sum(attribute='appt_today') }};
-  const dcAtm={{ daily_rows | sum(attribute='appt_future') }};
+  // ── Cumulative data ──
+  const cumAppsVal = cumulative(ps.apps_val);
+  const cumInfVal  = cumulative(ps.inforce_val);
+  const totApps = total(ps.apps_val);
+  const totInf  = total(ps.inforce_val);
 
-  // Performance charts
-  // KPI values read directly from the table — team uses tfoot, individual uses their row.
-  // This guarantees charts match the table exactly, no separate math.
-  function getTableRow(){
-    if(selectedAdviser==='team') return document.getElementById('team-total-row');
-    return document.querySelector(`#perf-tbody tr[data-uid="${selectedAdviser}"]`);
-  }
-  const trow = getTableRow();
-  const tTalkMins = trow ? parseFloat(trow.dataset.talkMins||0) : 0;
-  const tQpd      = trow ? parseFloat(trow.dataset.qpd||0)       : 0;
-  const tApd      = trow ? parseFloat(trow.dataset.apd||0)       : 0;
-  const tInf      = trow ? parseFloat(trow.dataset.inf||0)       : 0;
-
-  buildLine('chart-talk',ps.talk_mins,ps.name,fmtMins,T.talkTgt,T.showTalkTgt,T.talkLineColor,T.talkTgtColor,tTalkMins,T.avgLineColor,T.showAvgTalk);
-  document.getElementById('kpi-talk').textContent=fmtMins(tTalkMins);
-  document.getElementById('sub-talk').textContent=`avg per day · target ${fmtMins(T.talkTgt)}`;
-  setBeacon('beacon-talk',tTalkMins,T.talkOn,T.talkNear);
-
-  buildLine('chart-qpd',ps.quotes_cnt,ps.name,v=>v.toFixed(0),T.qTgt,T.showQTgt,T.qLineColor,T.qTgtColor,tQpd,T.avgLineColor,T.showAvgQ);
-  document.getElementById('kpi-qpd').textContent=tQpd.toFixed(1);
-  document.getElementById('sub-qpd').textContent=`avg per day · target ${T.qTgt}`;
-  setBeacon('beacon-qpd',tQpd,T.qOn,T.qNear);
-
-  buildLine('chart-apd',ps.apps_cnt,ps.name,v=>v.toFixed(0),T.aTgt,T.showATgt,T.aLineColor,T.aTgtColor,tApd,T.avgLineColor,T.showAvgA);
-  document.getElementById('kpi-apd').textContent=tApd.toFixed(1);
-  document.getElementById('sub-apd').textContent=`avg per day · target ${T.aTgt}`;
-  setBeacon('beacon-apd',tApd,T.aOn,T.aNear);
-
-  // Inforce $ chart — daily values
-  // Per-adviser inforce target — team sums all, individual uses their own
+  // ── Inforce target (multi-select aware) ──
+  const chosen = allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
   let infScaledTgt;
-  if(selectedAdviser==='team'){
-    infScaledTgt = allAdvisers.reduce((s,a)=>(s+(T.infTgts[a.uid]||20000)),0);
+  if(chosen.length>1){
+    infScaledTgt = chosen.reduce((s,a)=>s+(T.infTgts[a.uid]||20000),0);
+  } else if(chosen.length===1){
+    infScaledTgt = T.infTgts[chosen[0].uid]||20000;
   } else {
-    infScaledTgt = (T.infTgts[parseInt(selectedAdviser)]||20000);
+    infScaledTgt = 20000;
   }
-  const totInf = tInf;
-  buildLine('chart-inf',ps.inforce_val,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor,totInf,T.avgLineColor,T.showAvgInf);
-  document.getElementById('kpi-inf').textContent=fmtMoney(totInf);
-  document.getElementById('sub-inf').textContent=`per day · target ${fmtMoney(infScaledTgt)} total`;
-  setBeacon('beacon-inf',totInf,infScaledTgt,infScaledTgt*0.75);
 
-  // Leads funnel charts — use same line colour as performance tab
-  const pLine=(cid,kid,arr)=>{buildLine(cid,arr,pip.name,v=>v.toFixed(0),null,false,T.talkLineColor);document.getElementById(kid).textContent=total(arr);};
-  pLine('chart-assigned','kpi-assigned',pip.assigned);
-  pLine('chart-contacted','kpi-contacted',pip.contacted);
-  pLine('chart-nocontact','kpi-nocontact',pip.no_contact);
-  pLine('chart-booked','kpi-booked',pip.booked);
+  // ── Performance tab charts ──
+  buildLine('chart-perf-apps',cumAppsVal,ps.name,fmtMoney,null,false,T.aLineColor);
+  const el1=document.getElementById('kpi-perf-apps');if(el1)el1.textContent=fmtMoney(totApps);
+
+  buildLine('chart-perf-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor);
+  const el2=document.getElementById('kpi-perf-inf');if(el2)el2.textContent=fmtMoney(totInf);
+  setBeacon('beacon-perf-inf',totInf,infScaledTgt,infScaledTgt*0.75);
+
+  // ── Checks tab charts (same cumulative data) ──
+  buildLine('chart-checks-apps',cumAppsVal,ps.name,fmtMoney,null,false,T.aLineColor);
+  const el3=document.getElementById('kpi-checks-apps');if(el3)el3.textContent=fmtMoney(totApps);
+
+  buildLine('chart-checks-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor);
+  const el4=document.getElementById('kpi-checks-inf');if(el4)el4.textContent=fmtMoney(totInf);
+  setBeacon('beacon-checks-inf',totInf,infScaledTgt,infScaledTgt*0.75);
 
   refreshBadges();
 }
+
 // Hide loading overlay — always remove on load regardless of errors
 window.addEventListener('load', () => document.getElementById('loading-overlay').classList.remove('active'));
 try { rebuildCharts(); } catch(e) {
   console.error('Chart build error:', e);
   document.getElementById('loading-overlay').classList.remove('active');
 }
+
 function openTargets(){
   document.getElementById('t-talk-tgt').value=T.talkTgt;
-  document.getElementById('t-talk-tgt-show').checked=T.showTalkTgt;
   document.getElementById('t-q-tgt').value=T.qTgt;
-  document.getElementById('t-q-tgt-show').checked=T.showQTgt;
   document.getElementById('t-a-tgt').value=T.aTgt;
-  document.getElementById('t-a-tgt-show').checked=T.showATgt;
   allAdvisers.forEach(a=>{ const el=document.getElementById('t-inf-tgt-'+a.uid); if(el) el.value=T.infTgts[a.uid]||20000; });
   document.getElementById('t-inf-tgt-show').checked=T.showInfTgt;
-  document.getElementById('t-show-avg').checked=T.showAvgTalk;
-  document.getElementById('t-show-avg-q').checked=T.showAvgQ;
-  document.getElementById('t-show-avg-a').checked=T.showAvgA;
-  document.getElementById('t-show-avg-inf').checked=T.showAvgInf;
   document.getElementById('inf-tgt-hint').textContent=`Team target = sum of individual targets`;
-  // Per-chart colours
-  ['talk','q','a','inf'].forEach(k=>{
-    document.getElementById(`t-${k}-line-color`).value=T[`${k}LineColor`];
-    document.getElementById(`t-${k}-tgt-color`).value=T[`${k}TgtColor`];
-    document.getElementById(`t-${k}-avg-color`).value=T.avgLineColor;
-    previewTgtColor(`${k}-line`,T[`${k}LineColor`]);
-    previewTgtColor(`${k}-tgt`,T[`${k}TgtColor`]);
-    previewTgtColor(`${k}-avg`,T.avgLineColor);
-  });
+  document.getElementById('t-inf-line-color').value=T.infLineColor;
+  document.getElementById('t-inf-tgt-color').value=T.infTgtColor;
+  previewTgtColor('inf-line',T.infLineColor);
+  previewTgtColor('inf-tgt',T.infTgtColor);
   document.getElementById('thr-on-color').value=T.onColor;
   document.getElementById('thr-on-enabled').checked=T.onEnabled;
   document.getElementById('thr-near-color').value=T.nearColor;
@@ -1122,11 +1320,507 @@ function openTargets(){
   document.getElementById('thr-a-near').value=T.aNear;
   document.getElementById('thr-inf-on').value=T.infOn;
   document.getElementById('thr-inf-near').value=T.infNear;
+  document.getElementById('thr-talk-below').value=T.talkBelow;
+  document.getElementById('thr-q-below').value=T.qBelow;
+  document.getElementById('thr-a-below').value=T.aBelow;
+  document.getElementById('thr-inf-below').value=T.infBelow;
   ['on','near','below'].forEach(k=>previewColor(k,T[k+'Color']));
   document.getElementById('targets-modal').classList.add('open');
 }
 function closeTargets(){document.getElementById('targets-modal').classList.remove('open');}
 function closeTargetsOutside(e){if(e.target===document.getElementById('targets-modal'))closeTargets();}
+
+// ── Remediation slide-in panel ──
+const REMED_STATUS={0:'Pending',1:'In Progress',2:'Resolved'};
+const REMED_CLS={0:'remed-status-pending',1:'remed-status-inprogress',2:'remed-status-resolved'};
+let _remedUid=null;
+let _remedTab='pending';
+let _remedSortAsc=true;  // true=oldest first, false=newest first
+let _remedFilter='';     // task_name filter
+let _remedExpandTimers={};
+
+function remedAgeBeacon(dateStr){
+  const created=new Date(dateStr+'T00:00:00');
+  const now=new Date();
+  const diffDays=Math.floor((now-created)/(1000*60*60*24));
+  if(diffDays>=7) return 'beacon beacon-red';
+  if(diffDays>=2) return 'beacon beacon-yellow';
+  return 'beacon beacon-green';
+}
+
+function getFilteredItems(){
+  const allItems=remedDetails[_remedUid]||[];
+  let items=_remedTab==='pending'
+    ? allItems.filter(it=>it.status===0||it.status===1)
+    : allItems.filter(it=>it.status===2);
+  if(_remedFilter) items=items.filter(it=>it.task_name===_remedFilter);
+  items.sort((a,b)=>_remedSortAsc
+    ? a.created_date.localeCompare(b.created_date)
+    : b.created_date.localeCompare(a.created_date));
+  return items;
+}
+
+function renderRemedCards(items){
+  const body=document.getElementById('remed-panel-body');
+  // Clear any pending expand timers
+  Object.values(_remedExpandTimers).forEach(clearTimeout);
+  _remedExpandTimers={};
+  if(!items.length){
+    const msg=_remedTab==='pending'?'No pending remediations in this period.':'No resolved remediations in this period.';
+    body.innerHTML=`<div class="remed-empty">${msg}</div>`;
+    return;
+  }
+  body.innerHTML=items.map((it,idx)=>{
+    const stLbl=REMED_STATUS[it.status]||'Unknown';
+    const stCls=REMED_CLS[it.status]||'';
+    const clientName=it.client_name||'Client #'+it.lead_id;
+    const beaconCls=remedAgeBeacon(it.created_date);
+    const userNote=it.description||'';
+    const sysNote=it.last_note||'';
+    const url=`${CRM_BASE}/leads/${it.lead_id}/`;
+    return `<a class="remed-card" href="${url}" target="_blank">
+      <div class="remed-card-top">
+        <div class="remed-card-client">${clientName}</div>
+        <div class="remed-card-date-wrap">
+          <span class="${beaconCls}"></span>
+          <span class="remed-card-date">${it.created_date}</span>
+        </div>
+      </div>
+      <div class="remed-card-field">
+        <div class="remed-card-label">Status</div>
+        <div class="remed-card-value"><span class="remed-status ${stCls}">${stLbl}</span></div>
+      </div>
+      <div class="remed-card-field">
+        <div class="remed-card-label">Task</div>
+        <div class="remed-card-value">${it.task_name}</div>
+      </div>
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-idx="u${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last user generated note
+        </button>
+        <div class="remed-accordion-body" id="remed-note-u${idx}">
+          <div class="remed-accordion-text">${userNote||'No information provided'}</div>
+        </div>
+      </div>
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-idx="s${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last system generated note
+        </button>
+        <div class="remed-accordion-body" id="remed-note-s${idx}">
+          <div class="remed-accordion-text">${sysNote||'No information provided'}</div>
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+function toggleRemedAccordion(e){
+  const btn=e.target.closest('.remed-accordion-btn');
+  if(!btn) return;
+  e.preventDefault();e.stopPropagation();
+  const idx=btn.dataset.idx;
+  const body=document.getElementById('remed-note-'+idx);
+  if(!body) return;
+  const isOpen=btn.classList.toggle('open');
+  body.classList.toggle('open',isOpen);
+  // Clear existing timer
+  if(_remedExpandTimers[idx]){clearTimeout(_remedExpandTimers[idx]);delete _remedExpandTimers[idx];}
+  if(isOpen){
+    _remedExpandTimers[idx]=setTimeout(()=>{
+      btn.classList.remove('open');
+      body.classList.remove('open');
+      delete _remedExpandTimers[idx];
+    },20000);
+  }
+}
+document.addEventListener('click',toggleRemedAccordion);
+
+function populateRemedFilter(){
+  const allItems=remedDetails[_remedUid]||[];
+  const tabItems=_remedTab==='pending'
+    ? allItems.filter(it=>it.status===0||it.status===1)
+    : allItems.filter(it=>it.status===2);
+  const types=[...new Set(tabItems.map(it=>it.task_name))].sort();
+  const sel=document.getElementById('remed-filter');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  sel.value=types.includes(prev)?prev:'';
+  _remedFilter=sel.value;
+}
+
+function toggleRemedSort(){
+  _remedSortAsc=!_remedSortAsc;
+  document.getElementById('remed-sort-label').textContent=_remedSortAsc?'Oldest first':'Newest first';
+  updateRemedPanel();
+}
+function applyRemedFilter(){
+  _remedFilter=document.getElementById('remed-filter').value;
+  updateRemedPanel();
+}
+
+function openRemed(uid){
+  _remedUid=uid;
+  _remedTab='pending';
+  _remedSortAsc=true;
+  _remedFilter='';
+  document.getElementById('remed-sort-label').textContent='Oldest first';
+  const advName=allAdvisers.find(a=>a.uid===uid)?.name||'Adviser';
+  document.getElementById('remed-panel-title').textContent='Remediations — '+advName;
+  document.querySelectorAll('.remed-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.remedTab==='pending');
+  });
+  populateRemedFilter();
+  updateRemedPanel();
+  document.getElementById('remed-backdrop').classList.add('open');
+  document.getElementById('remed-panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function updateRemedPanel(){
+  const allItems=remedDetails[_remedUid]||[];
+  const pending=allItems.filter(it=>it.status===0||it.status===1);
+  const resolved=allItems.filter(it=>it.status===2);
+  document.getElementById('remed-cnt-pending').textContent=pending.length;
+  document.getElementById('remed-cnt-resolved').textContent=resolved.length;
+  const items=getFilteredItems();
+  document.getElementById('remed-panel-sub').textContent=items.length+' item'+(items.length!==1?'s':'');
+  renderRemedCards(items);
+}
+
+function switchRemedTab(tab){
+  _remedTab=tab;
+  _remedFilter='';
+  document.querySelectorAll('.remed-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.remedTab===tab);
+  });
+  populateRemedFilter();
+  updateRemedPanel();
+  document.getElementById('remed-panel-body').scrollTop=0;
+}
+
+function closeRemed(){
+  document.getElementById('remed-backdrop').classList.remove('open');
+  document.getElementById('remed-panel').classList.remove('open');
+  document.body.style.overflow='';
+  Object.values(_remedExpandTimers).forEach(clearTimeout);
+  _remedExpandTimers={};
+}
+document.addEventListener('click',function(e){
+  const link=e.target.closest('.remed-pending-link');
+  if(link){e.preventDefault();openRemed(parseInt(link.dataset.uid));}
+});
+
+// ── Assigned Leads slide-in panel ──
+const LEAD_STATUS_CLS={0:'lead-status-prospect',1:'lead-status-contacted',2:'lead-status-booked',3:'lead-status-quoted',4:'lead-status-applied',5:'lead-status-won',6:'lead-status-lost'};
+const LEAD_ACTIVE=new Set([0,1,2,3,4]);
+const LEAD_CLOSED=new Set([5,6]);
+let _assignedUid=null;
+let _assignedTab='active';
+let _assignedSortAsc=true;
+let _assignedFilter='';
+let _assignedExpandTimers={};
+
+function getFilteredAssigned(){
+  const allItems=assignedDetails[_assignedUid]||[];
+  const tabSet=_assignedTab==='active'?LEAD_ACTIVE:LEAD_CLOSED;
+  let items=allItems.filter(it=>tabSet.has(it.status));
+  if(_assignedFilter) items=items.filter(it=>String(it.status)===_assignedFilter);
+  items.sort((a,b)=>_assignedSortAsc
+    ? a.assigned_date.localeCompare(b.assigned_date)
+    : b.assigned_date.localeCompare(a.assigned_date));
+  return items;
+}
+
+function renderAssignedCards(items){
+  const body=document.getElementById('assigned-panel-body');
+  Object.values(_assignedExpandTimers).forEach(clearTimeout);
+  _assignedExpandTimers={};
+  if(!items.length){
+    const msg=_assignedTab==='active'?'No active leads in this period.':'No closed leads in this period.';
+    body.innerHTML=`<div class="remed-empty">${msg}</div>`;
+    return;
+  }
+  body.innerHTML=items.map((it,idx)=>{
+    const stLbl=LEAD_STATUS[it.status]||'Unknown';
+    const stCls=LEAD_STATUS_CLS[it.status]||'';
+    const clientName=it.client_name||'Client #'+it.lead_id;
+    const beaconCls=remedAgeBeacon(it.assigned_date);
+    const userNote=it.user_note||'';
+    const sysNote=it.system_note||'';
+    const src=it.source||'';
+    const url=`${CRM_BASE}/leads/${it.lead_id}/`;
+    return `<a class="remed-card" href="${url}" target="_blank">
+      <div class="remed-card-top">
+        <div class="remed-card-client">${clientName}</div>
+        <div class="remed-card-date-wrap">
+          <span class="${beaconCls}"></span>
+          <span class="remed-card-date">${it.assigned_date}</span>
+        </div>
+      </div>
+      <div class="remed-card-field">
+        <div class="remed-card-label">Status</div>
+        <div class="remed-card-value"><span class="remed-status ${stCls}">${stLbl}</span></div>
+      </div>
+      ${src?`<div class="remed-card-field">
+        <div class="remed-card-label">Source</div>
+        <div class="remed-card-value">${src}</div>
+      </div>`:''}
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-aidx="u${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last user generated note
+        </button>
+        <div class="remed-accordion-body" id="assigned-note-u${idx}">
+          <div class="remed-accordion-text">${userNote||'No information provided'}</div>
+        </div>
+      </div>
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-aidx="s${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last system generated note
+        </button>
+        <div class="remed-accordion-body" id="assigned-note-s${idx}">
+          <div class="remed-accordion-text">${sysNote||'No information provided'}</div>
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+function toggleAssignedAccordion(e){
+  const btn=e.target.closest('[data-aidx]');
+  if(!btn||!btn.classList.contains('remed-accordion-btn')) return;
+  e.preventDefault();e.stopPropagation();
+  const idx=btn.dataset.aidx;
+  const body=document.getElementById('assigned-note-'+idx);
+  if(!body) return;
+  const isOpen=btn.classList.toggle('open');
+  body.classList.toggle('open',isOpen);
+  if(_assignedExpandTimers[idx]){clearTimeout(_assignedExpandTimers[idx]);delete _assignedExpandTimers[idx];}
+  if(isOpen){
+    _assignedExpandTimers[idx]=setTimeout(()=>{
+      btn.classList.remove('open');
+      body.classList.remove('open');
+      delete _assignedExpandTimers[idx];
+    },20000);
+  }
+}
+document.addEventListener('click',toggleAssignedAccordion);
+
+function populateAssignedFilter(){
+  const allItems=assignedDetails[_assignedUid]||[];
+  const tabSet=_assignedTab==='active'?LEAD_ACTIVE:LEAD_CLOSED;
+  const tabItems=allItems.filter(it=>tabSet.has(it.status));
+  const statuses=[...new Set(tabItems.map(it=>it.status))].sort();
+  const sel=document.getElementById('assigned-filter');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">All statuses</option>'+statuses.map(s=>`<option value="${s}">${LEAD_STATUS[s]||'Unknown'}</option>`).join('');
+  sel.value=statuses.map(String).includes(prev)?prev:'';
+  _assignedFilter=sel.value;
+}
+
+function toggleAssignedSort(){
+  _assignedSortAsc=!_assignedSortAsc;
+  document.getElementById('assigned-sort-label').textContent=_assignedSortAsc?'Oldest first':'Newest first';
+  updateAssignedPanel();
+}
+function applyAssignedFilter(){
+  _assignedFilter=document.getElementById('assigned-filter').value;
+  updateAssignedPanel();
+}
+
+function openAssigned(uid){
+  _assignedUid=uid;
+  _assignedTab='active';
+  _assignedSortAsc=true;
+  _assignedFilter='';
+  document.getElementById('assigned-sort-label').textContent='Oldest first';
+  const advName=allAdvisers.find(a=>a.uid===uid)?.name||'Adviser';
+  document.getElementById('assigned-panel-title').textContent='Assigned Leads — '+advName;
+  document.querySelectorAll('#assigned-panel .remed-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.assignedTab==='active');
+  });
+  populateAssignedFilter();
+  updateAssignedPanel();
+  document.getElementById('assigned-backdrop').classList.add('open');
+  document.getElementById('assigned-panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function updateAssignedPanel(){
+  const allItems=assignedDetails[_assignedUid]||[];
+  const active=allItems.filter(it=>LEAD_ACTIVE.has(it.status));
+  const closed=allItems.filter(it=>LEAD_CLOSED.has(it.status));
+  document.getElementById('assigned-cnt-active').textContent=active.length;
+  document.getElementById('assigned-cnt-closed').textContent=closed.length;
+  const items=getFilteredAssigned();
+  document.getElementById('assigned-panel-sub').textContent=items.length+' lead'+(items.length!==1?'s':'');
+  renderAssignedCards(items);
+}
+
+function switchAssignedTab(tab){
+  _assignedTab=tab;
+  _assignedFilter='';
+  document.querySelectorAll('#assigned-panel .remed-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.assignedTab===tab);
+  });
+  populateAssignedFilter();
+  updateAssignedPanel();
+  document.getElementById('assigned-panel-body').scrollTop=0;
+}
+
+function closeAssigned(){
+  document.getElementById('assigned-backdrop').classList.remove('open');
+  document.getElementById('assigned-panel').classList.remove('open');
+  document.body.style.overflow='';
+  Object.values(_assignedExpandTimers).forEach(clearTimeout);
+  _assignedExpandTimers={};
+}
+document.addEventListener('click',function(e){
+  const link=e.target.closest('.assigned-link');
+  if(link){e.preventDefault();openAssigned(parseInt(link.dataset.uid));}
+});
+
+// ── Unassigned Leads badge beacon ──
+(function(){
+  const cnt=unassignedLeads.length;
+  const el=document.getElementById('beacon-unassigned');
+  if(el) el.className='beacon '+(cnt>0?'beacon-red':'beacon-green');
+})();
+
+// ── Unassigned Leads slide-in panel ──
+let _unassignedSortAsc=true;
+let _unassignedFilter='';
+let _unassignedExpandTimers={};
+
+function getFilteredUnassigned(){
+  let items=[...unassignedLeads];
+  if(_unassignedFilter) items=items.filter(it=>String(it.status)===_unassignedFilter);
+  items.sort((a,b)=>_unassignedSortAsc
+    ? a.assigned_date.localeCompare(b.assigned_date)
+    : b.assigned_date.localeCompare(a.assigned_date));
+  return items;
+}
+
+function renderUnassignedCards(items){
+  const body=document.getElementById('unassigned-panel-body');
+  Object.values(_unassignedExpandTimers).forEach(clearTimeout);
+  _unassignedExpandTimers={};
+  if(!items.length){
+    body.innerHTML='<div class="remed-empty">No unassigned leads found.</div>';
+    return;
+  }
+  body.innerHTML=items.map((it,idx)=>{
+    const stLbl=LEAD_STATUS[it.status]||'Unknown';
+    const stCls=LEAD_STATUS_CLS[it.status]||'';
+    const clientName=it.client_name||'Client #'+it.lead_id;
+    const beaconCls=remedAgeBeacon(it.assigned_date);
+    const url=`${CRM_BASE}/leads/${it.lead_id}/`;
+    const userNote=it.user_note||'';
+    const sysNote=it.system_note||'';
+    return `<a class="remed-card" href="${url}" target="_blank">
+      <div class="remed-card-top">
+        <div class="remed-card-client">${clientName}</div>
+        <div class="remed-card-date-wrap">
+          <span class="${beaconCls}"></span>
+          <span class="remed-card-date">${it.assigned_date}</span>
+        </div>
+      </div>
+      <div class="remed-card-field">
+        <div class="remed-card-label">Status</div>
+        <div class="remed-card-value"><span class="remed-status ${stCls}">${stLbl}</span></div>
+      </div>
+      ${it.source?`<div class="remed-card-field">
+        <div class="remed-card-label">Source</div>
+        <div class="remed-card-value">${it.source}</div>
+      </div>`:''}
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-uidx="u${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last user generated note
+        </button>
+        <div class="remed-accordion-body" id="unassigned-note-u${idx}">
+          <div class="remed-accordion-text">${userNote||'No information provided'}</div>
+        </div>
+      </div>
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-uidx="s${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last system generated note
+        </button>
+        <div class="remed-accordion-body" id="unassigned-note-s${idx}">
+          <div class="remed-accordion-text">${sysNote||'No information provided'}</div>
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+function toggleUnassignedAccordion(e){
+  const btn=e.target.closest('[data-uidx]');
+  if(!btn||!btn.classList.contains('remed-accordion-btn')) return;
+  e.preventDefault();e.stopPropagation();
+  const idx=btn.dataset.uidx;
+  const body=document.getElementById('unassigned-note-'+idx);
+  if(!body) return;
+  const isOpen=btn.classList.toggle('open');
+  body.classList.toggle('open',isOpen);
+  if(_unassignedExpandTimers[idx]){clearTimeout(_unassignedExpandTimers[idx]);delete _unassignedExpandTimers[idx];}
+  if(isOpen){
+    _unassignedExpandTimers[idx]=setTimeout(()=>{
+      btn.classList.remove('open');body.classList.remove('open');
+      delete _unassignedExpandTimers[idx];
+    },20000);
+  }
+}
+document.addEventListener('click',toggleUnassignedAccordion);
+
+function populateUnassignedFilter(){
+  const statuses=[...new Set(unassignedLeads.map(it=>it.status))].sort();
+  const sel=document.getElementById('unassigned-filter');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">All statuses</option>'+statuses.map(s=>`<option value="${s}">${LEAD_STATUS[s]||'Unknown'}</option>`).join('');
+  sel.value=statuses.map(String).includes(prev)?prev:'';
+  _unassignedFilter=sel.value;
+}
+
+function toggleUnassignedSort(){
+  _unassignedSortAsc=!_unassignedSortAsc;
+  document.getElementById('unassigned-sort-label').textContent=_unassignedSortAsc?'Oldest first':'Newest first';
+  updateUnassignedPanel();
+}
+function applyUnassignedFilter(){
+  _unassignedFilter=document.getElementById('unassigned-filter').value;
+  updateUnassignedPanel();
+}
+
+function openUnassigned(){
+  _unassignedSortAsc=true;
+  _unassignedFilter='';
+  document.getElementById('unassigned-sort-label').textContent='Oldest first';
+  populateUnassignedFilter();
+  updateUnassignedPanel();
+  document.getElementById('unassigned-backdrop').classList.add('open');
+  document.getElementById('unassigned-panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function updateUnassignedPanel(){
+  const items=getFilteredUnassigned();
+  document.getElementById('unassigned-panel-sub').textContent=items.length+' lead'+(items.length!==1?'s':'')+' not assigned to a consultant';
+  renderUnassignedCards(items);
+}
+
+function closeUnassigned(){
+  document.getElementById('unassigned-backdrop').classList.remove('open');
+  document.getElementById('unassigned-panel').classList.remove('open');
+  document.body.style.overflow='';
+  Object.values(_unassignedExpandTimers).forEach(clearTimeout);
+  _unassignedExpandTimers={};
+}
+
 function resetTargets(){
   T={...DEFAULTS};
   fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
@@ -1147,26 +1841,21 @@ function bv(id){return g(id).checked;}
 
 function saveTargets(){
   T={
-    talkTgt:fv('t-talk-tgt',150),showTalkTgt:bv('t-talk-tgt-show'),
-    qTgt:fv('t-q-tgt',6),showQTgt:bv('t-q-tgt-show'),
-    aTgt:fv('t-a-tgt',2),showATgt:bv('t-a-tgt-show'),
+    talkTgt:fv('t-talk-tgt',150),
+    qTgt:fv('t-q-tgt',6),
+    aTgt:fv('t-a-tgt',2),
     infTgts:Object.fromEntries(allAdvisers.map(a=>[a.uid,parseFloat(document.getElementById('t-inf-tgt-'+a.uid)?.value)||20000])),
     showInfTgt:bv('t-inf-tgt-show'),
-    showAvgTalk:bv('t-show-avg'),showAvgQ:bv('t-show-avg-q'),showAvgA:bv('t-show-avg-a'),showAvgInf:bv('t-show-avg-inf'),
-    avgLineColor:g('t-talk-avg-color').value,
-    talkLineColor:g('t-talk-line-color').value,talkTgtColor:g('t-talk-tgt-color').value,
-    qLineColor:g('t-q-line-color').value,qTgtColor:g('t-q-tgt-color').value,
-    aLineColor:g('t-a-line-color').value,aTgtColor:g('t-a-tgt-color').value,
+    aLineColor:T.aLineColor||'#7f56d9',
     infLineColor:g('t-inf-line-color').value,infTgtColor:g('t-inf-tgt-color').value,
     onColor:g('thr-on-color').value,onEnabled:bv('thr-on-enabled'),
     nearColor:g('thr-near-color').value,nearEnabled:bv('thr-near-enabled'),
     belowColor:g('thr-below-color').value,belowEnabled:bv('thr-below-enabled'),
-    talkOn:fv('thr-talk-on',150),talkNear:fv('thr-talk-near',120),
-    qOn:fv('thr-q-on',6),qNear:fv('thr-q-near',4),
-    aOn:fv('thr-a-on',2),aNear:fv('thr-a-near',1),
-    infOn:fv('thr-inf-on',20000),infNear:fv('thr-inf-near',15000),
+    talkOn:fv('thr-talk-on',150),talkNear:fv('thr-talk-near',120),talkBelow:fv('thr-talk-below',0),
+    qOn:fv('thr-q-on',6),qNear:fv('thr-q-near',4),qBelow:fv('thr-q-below',0),
+    aOn:fv('thr-a-on',2),aNear:fv('thr-a-near',1),aBelow:fv('thr-a-below',0),
+    infOn:fv('thr-inf-on',20000),infNear:fv('thr-inf-near',15000),infBelow:fv('thr-inf-below',0),
   };
-  // Save to server so settings persist across devices and sessions
   fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(T)});
   closeTargets();rebuildCharts();
 }

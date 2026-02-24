@@ -80,12 +80,17 @@ def post_settings():
     save_settings(data)
     return jsonify({"ok": True})
 
-SHOW_USER_IDS = {181, 182, 183, 152}
+SHOW_USER_IDS = {181, 182, 183, 152, 53}
 MIN_DATE = "2025-01-01"
 TZ_OFFSET = "+11:00"   # AEDT — single place to change if needed
+CONTACT_THRESHOLD_US = 45_000_000  # 45 seconds in microseconds
+_USER_IDS_SQL = ",".join(str(u) for u in sorted(SHOW_USER_IDS))
 
-AVATAR_COLORS = {181:"#6366f1",182:"#ec4899",152:"#f59e0b",183:"#10b981"}
-AVATAR_FILES  = {181:"Nataniel.jpeg",182:"Sam.jpeg",152:"Rebel.jpeg",183:"Gary.jpeg"}
+CRM_BASE_URL = "https://crm.slife.com.au"
+REMED_TYPE_IDS_SQL = "138,139,140,141,142,143,144,145,162,163,164,165,189,197"
+
+AVATAR_COLORS = {181:"#6366f1",182:"#ec4899",152:"#f59e0b",183:"#10b981",53:"#3b82f6"}
+AVATAR_FILES  = {181:"Nataniel.jpeg",182:"Sam.jpeg",152:"Rebel.jpeg",183:"Gary.jpeg",53:""}
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -164,7 +169,7 @@ def get_performance_stats(cursor, start, end):
                COALESCE(SUM(ncr.duration),0)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
+        WHERE up.user_id IN ({_USER_IDS_SQL})
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
           AND ncr.created >= {utc_start}
@@ -178,7 +183,7 @@ def get_performance_stats(cursor, start, end):
             for r in cursor.fetchall()}
 
     # Apps, inforce, days worked from reports_userstats
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT user_id,
                SUM(app_add)       AS apps_count,
                SUM(app_add_value) AS apps_value,
@@ -186,7 +191,7 @@ def get_performance_stats(cursor, start, end):
                SUM(app_com_value) AS inforce_value,
                SUM(CASE WHEN (contact>0 OR qut_add>0 OR app_add>0) THEN 1 ELSE 0 END) AS days_worked
         FROM reports_userstats
-        WHERE user_id IN (181,182,183,152)
+        WHERE user_id IN ({_USER_IDS_SQL})
           AND date BETWEEN %s AND %s
         GROUP BY user_id
     """, (start.isoformat(), end.isoformat()))
@@ -240,8 +245,8 @@ def get_pipeline_stats(cursor, start, end):
         SELECT up.user_id, COUNT(*) AS contacted
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
-          AND ncr.duration >= 5000000
+        WHERE up.user_id IN ({_USER_IDS_SQL})
+          AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
           AND ncr.created < {utc_end}
@@ -254,8 +259,8 @@ def get_pipeline_stats(cursor, start, end):
         SELECT up.user_id, COUNT(*) AS no_contact
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
-          AND ncr.duration < 5000000
+        WHERE up.user_id IN ({_USER_IDS_SQL})
+          AND ncr.duration < {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
           AND ncr.created < {utc_end}
@@ -284,28 +289,37 @@ def get_pipeline_stats(cursor, start, end):
     return {"assigned":assigned,"contacted":contacted,"no_contact":no_contact_totals,"booked":booked,"called":called}
 
 def get_schedule_appointments(cursor, today_dt):
-    """Count today's and future appointments from leads_leadschedule tasks."""
-    appt_today  = defaultdict(int)
-    appt_future = defaultdict(int)
+    """Count today's and future appointments by type (Discussion / Follow-up / Questions)."""
+    _empty = lambda: {"disc":0,"fu":0,"q":0}
+    appt_today  = defaultdict(_empty)
+    appt_future = defaultdict(_empty)
     try:
         utc_today_start = f"CONVERT_TZ('{today_dt.isoformat()}','{TZ_OFFSET}','+00:00')"
         cursor.execute(f"""
             SELECT user_id,
                    DATE(CONVERT_TZ(date,'+00:00','{TZ_OFFSET}')) AS appt_date,
+                   CASE
+                     WHEN text LIKE '%%Discussion%%' THEN 'disc'
+                     WHEN text LIKE '%%Follow%%'     THEN 'fu'
+                     WHEN text LIKE '%%Question%%'   THEN 'q'
+                     ELSE 'other'
+                   END AS appt_type,
                    COUNT(*) AS cnt
             FROM leads_leadschedule
-            WHERE object_type = 'task'
-              AND date >= {utc_today_start}
+            WHERE date >= {utc_today_start}
               AND user_id IS NOT NULL
-            GROUP BY user_id, appt_date
+            GROUP BY user_id, appt_date, appt_type
         """)
         for r in cursor.fetchall():
             dt = str(r["appt_date"]) if not hasattr(r["appt_date"], 'isoformat') else r["appt_date"].isoformat()
             uid = r["user_id"]
+            atype = r["appt_type"]
+            if atype == "other":
+                continue
             if dt == today_dt.isoformat():
-                appt_today[uid] += int(r["cnt"])
+                appt_today[uid][atype] += int(r["cnt"])
             else:
-                appt_future[uid] += int(r["cnt"])
+                appt_future[uid][atype] += int(r["cnt"])
     except Exception as e:
         log.warning("[appt] %s", e)
     return dict(appt_today), dict(appt_future)
@@ -326,7 +340,7 @@ def get_hourly_series(cursor, day):
                SUM(ncr.duration)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
+        WHERE up.user_id IN ({_USER_IDS_SQL})
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
           AND ncr.created >= {utc_start}
@@ -364,8 +378,8 @@ def get_hourly_series(cursor, day):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
-          AND ncr.duration >= 5000000
+        WHERE up.user_id IN ({_USER_IDS_SQL})
+          AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
           AND ncr.created < {utc_end}
@@ -422,8 +436,8 @@ def get_hourly_pipeline_series(cursor, day):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
-          AND ncr.duration >= 5000000
+        WHERE up.user_id IN ({_USER_IDS_SQL})
+          AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
           AND ncr.created < {utc_end}
@@ -438,8 +452,8 @@ def get_hourly_pipeline_series(cursor, day):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
-          AND ncr.duration < 5000000
+        WHERE up.user_id IN ({_USER_IDS_SQL})
+          AND ncr.duration < {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
           AND ncr.created < {utc_end}
@@ -464,13 +478,13 @@ def get_daily_series(cursor, start, end):
     utc_start, utc_end = _utc_range(start, end)
 
     # Daily stats from reports_userstats
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT DATE(date) AS stat_date, user_id,
                contact, qut_add AS leads_quoted,
                app_add AS apps_count, app_add_value AS apps_value,
                app_com AS inforce_count, app_com_value AS inforce_value
         FROM reports_userstats
-        WHERE user_id IN (181,182,183,152)
+        WHERE user_id IN ({_USER_IDS_SQL})
           AND date BETWEEN %s AND %s
           AND DAYOFWEEK(date) NOT IN (1,7)
         ORDER BY stat_date, user_id
@@ -496,7 +510,7 @@ def get_daily_series(cursor, start, end):
                SUM(ncr.duration)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
+        WHERE up.user_id IN ({_USER_IDS_SQL})
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
           AND ncr.created >= {utc_start}
@@ -515,10 +529,10 @@ def get_daily_series(cursor, start, end):
     dates_set = sorted(set(dates_set))
 
     # Daily contacted count — already in reports_userstats.contact, no join needed
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT DATE(date) AS dt, user_id, contact AS cnt
         FROM reports_userstats
-        WHERE user_id IN (181,182,183,152)
+        WHERE user_id IN ({_USER_IDS_SQL})
           AND date BETWEEN %s AND %s
           AND DAYOFWEEK(date) NOT IN (1,7)
     """, (start.isoformat(), end.isoformat()))
@@ -548,8 +562,8 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
-          AND ncr.duration >= 5000000
+        WHERE up.user_id IN ({_USER_IDS_SQL})
+          AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
           AND ncr.created < {utc_end}
@@ -564,8 +578,8 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN (181,182,183,152)
-          AND ncr.duration < 5000000
+        WHERE up.user_id IN ({_USER_IDS_SQL})
+          AND ncr.duration < {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
           AND ncr.created < {utc_end}
@@ -591,6 +605,209 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
     for r in cursor.fetchall(): booked_d[r["user_id"]][str(r["dt"])[:10]]=int(r["cnt"])
 
     return dict(assigned_d), dict(contacted_d), dict(no_contact_d), dict(booked_d)
+
+
+def get_remediation_stats(cursor, start, end):
+    """Remediation aggregate counts per adviser + pending detail for popup."""
+    utc_start, utc_end = _utc_range(start, end)
+
+    # 1. Aggregate counts: Total (any status) and Pending (status 0/1) in date range
+    cursor.execute(f"""
+        SELECT l.user_id,
+               COUNT(*)                                       AS total_remed,
+               SUM(CASE WHEN lr.status IN (0,1) THEN 1 ELSE 0 END) AS pending_remed
+        FROM leads_leadrequirement lr
+        JOIN leads_lead l ON l.id = lr.lead_id
+        WHERE lr.type_id IN ({REMED_TYPE_IDS_SQL})
+          AND l.user_id IN ({_USER_IDS_SQL})
+          AND lr.created >= {utc_start}
+          AND lr.created <  {utc_end}
+        GROUP BY l.user_id
+    """)
+    counts = {}
+    for r in cursor.fetchall():
+        counts[r["user_id"]] = {
+            "total": int(r["total_remed"]),
+            "pending": int(r["pending_remed"] or 0),
+        }
+
+    # 2. Detailed records — all statuses (pending + resolved) for slide-in panel
+    cursor.execute(f"""
+        SELECT lr.id            AS req_id,
+               lr.lead_id,
+               lr.object_type,
+               lr.object_id,
+               lr.name          AS task_name,
+               lr.description,
+               lr.last_note,
+               lr.status,
+               DATE(CONVERT_TZ(lr.created,'+00:00','{TZ_OFFSET}')) AS created_date,
+               l.user_id        AS adviser_id,
+               CONCAT(l.first_name,' ',l.last_name)               AS client_name,
+               CASE WHEN lr.object_type='application' THEN lr.object_id ELSE NULL END AS app_id
+        FROM leads_leadrequirement lr
+        JOIN leads_lead l ON l.id = lr.lead_id
+        WHERE lr.type_id IN ({REMED_TYPE_IDS_SQL})
+          AND l.user_id IN ({_USER_IDS_SQL})
+          AND lr.created >= {utc_start}
+          AND lr.created <  {utc_end}
+        ORDER BY lr.created ASC
+    """)
+    details = defaultdict(list)
+    for r in cursor.fetchall():
+        details[r["adviser_id"]].append({
+            "req_id": r["req_id"],
+            "lead_id": r["lead_id"],
+            "object_type": r["object_type"],
+            "object_id": r["object_id"],
+            "task_name": r["task_name"],
+            "description": (r["description"] or "").strip(),
+            "last_note": (r["last_note"] or "").strip(),
+            "status": int(r["status"]),
+            "created_date": str(r["created_date"]),
+            "client_name": (r["client_name"] or "").strip(),
+            "app_id": r["app_id"],
+        })
+
+    return counts, dict(details)
+
+
+# Lead status map — matches actual CRM pipeline stages
+LEAD_STATUS = {
+    0: "Prospect", 1: "Contacted", 2: "Booked",
+    3: "Quoted", 4: "Applied", 5: "Won", 6: "Lost",
+}
+LEAD_STATUS_ACTIVE = {0, 1, 2, 3, 4}  # "Active" tab
+LEAD_STATUS_CLOSED = {5, 6}            # "Closed" tab
+
+
+def get_assigned_lead_details(cursor, start, end):
+    """All leads assigned in the period, per adviser — for the slide-in panel.
+
+    Returns user_note (last human-written note) and system_note (last auto-generated)
+    separately so the panel can display them in two accordions.
+    """
+    cursor.execute("""
+        SELECT l.id          AS lead_id,
+               l.user_id     AS adviser_id,
+               CONCAT(l.first_name,' ',l.last_name) AS client_name,
+               l.status,
+               l.source_code,
+               DATE(l.assigned)                      AS assigned_date,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND la.action_type = 'note' AND la.user_id IS NOT NULL
+                ORDER BY la.created DESC LIMIT 1) AS user_note,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND (la.action_type != 'note' OR la.user_id IS NULL)
+                ORDER BY la.created DESC LIMIT 1) AS system_note
+        FROM leads_lead l
+        WHERE l.assigned >= %s AND l.assigned < %s
+          AND l.user_id IN ({uids})
+        ORDER BY l.assigned ASC
+    """.format(uids=_USER_IDS_SQL),
+        (start.isoformat(), (end + timedelta(days=1)).isoformat()),
+    )
+    details = defaultdict(list)
+    for r in cursor.fetchall():
+        details[r["adviser_id"]].append({
+            "lead_id": r["lead_id"],
+            "client_name": (r["client_name"] or "").strip(),
+            "status": int(r["status"]),
+            "source": (r["source_code"] or "").strip(),
+            "assigned_date": str(r["assigned_date"]),
+            "user_note": (r["user_note"] or "").strip(),
+            "system_note": (r["system_note"] or "").strip(),
+        })
+    return dict(details)
+
+
+def get_contact_before_close(cursor, start, end):
+    """Average 45s+ calls per closed lead (Won/Lost), per adviser.
+
+    For each closed lead, counts how many 45s+ calls the adviser made to that
+    lead's phone number, then averages across all closed leads for the adviser.
+    """
+    cursor.execute(f"""
+        SELECT sub.user_id,
+               AVG(sub.calls) AS avg_cbc
+        FROM (
+            SELECT l.user_id,
+                   l.id AS lead_id,
+                   COUNT(ncr.id) AS calls
+            FROM leads_lead l
+            INNER JOIN account_userprofile up ON up.user_id = l.user_id
+            LEFT JOIN noojee_callrecord ncr
+                ON ncr.extension = up.extension
+                AND ncr.phone = REPLACE(REPLACE(l.phone, ' ', ''), '-', '')
+                AND ncr.duration >= {CONTACT_THRESHOLD_US}
+                AND ncr.status = 'Hungup'
+            WHERE l.user_id IN ({_USER_IDS_SQL})
+              AND l.status IN (5, 6)
+              AND l.assigned >= %s AND l.assigned < %s
+            GROUP BY l.user_id, l.id
+        ) sub
+        GROUP BY sub.user_id
+    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
+    return {r["user_id"]: round(float(r["avg_cbc"]), 1) for r in cursor.fetchall()}
+
+
+# ── Unassigned leads: LIP (Ltd) leads not assigned to a consultant ────────
+# Test‑lead filter keywords (matched case-insensitively against first/last name)
+_TEST_NAMES = (
+    "test", "testy", "testing", "fake", "dummy", "sample",
+    "christmas", "donald", "trump", "claus", "asdf", "xxx",
+    "aaa", "zzz", "admin", "temptest",
+)
+_TEST_NAMES_SQL = ",".join(f"'{n}'" for n in _TEST_NAMES)
+
+
+# Consultants whose leads are NOT considered unassigned
+_CONSULTANT_IDS = {181, 182, 183, 152}  # Nate, Sam, Gary B, Rebel
+_CONSULTANT_IDS_SQL = ",".join(str(u) for u in sorted(_CONSULTANT_IDS))
+
+
+def get_unassigned_leads(cursor):
+    """LIP (Ltd) leads not assigned to a consultant (Nate/Sam/Gary B/Rebel),
+       within the last 60 days, excluding test/fake leads."""
+    cursor.execute(f"""
+        SELECT l.id          AS lead_id,
+               CONCAT(l.first_name,' ',l.last_name) AS client_name,
+               l.status,
+               l.source_code,
+               DATE(l.assigned) AS assigned_date,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND la.action_type = 'note' AND la.user_id IS NOT NULL
+                ORDER BY la.created DESC LIMIT 1) AS user_note,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND (la.action_type != 'note' OR la.user_id IS NULL)
+                ORDER BY la.created DESC LIMIT 1) AS system_note
+        FROM leads_lead l
+        WHERE l.groups_cache = 'LIP (Ltd)'
+          AND l.status IN (0, 1, 2, 3, 4)
+          AND (l.user_id IS NULL OR l.user_id NOT IN ({_CONSULTANT_IDS_SQL}))
+          AND l.assigned >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+          AND LOWER(TRIM(l.first_name)) NOT IN ({_TEST_NAMES_SQL})
+          AND LOWER(TRIM(l.last_name))  NOT IN ({_TEST_NAMES_SQL})
+          AND TRIM(l.first_name) != ''
+          AND TRIM(l.last_name)  != ''
+        ORDER BY l.assigned ASC
+    """)
+    leads = []
+    for r in cursor.fetchall():
+        leads.append({
+            "lead_id": r["lead_id"],
+            "client_name": (r["client_name"] or "").strip(),
+            "status": int(r["status"]),
+            "source": (r["source_code"] or "").strip(),
+            "assigned_date": str(r["assigned_date"]),
+            "user_note": (r["user_note"] or "").strip(),
+            "system_note": (r["system_note"] or "").strip(),
+        })
+    return leads
 
 
 @app.route("/")
@@ -646,14 +863,14 @@ def index():
         log.warning("[db_init] %s", _e)
     # ────────────────────────────────────────────────────────────────────────
 
-    default_end   = lbd
+    # Default view = M0 (month-to-date)
+    default_end   = today
     default_start = max(today.replace(day=1), min_date_obj)
     if default_start > default_end:
         default_start = max(default_end-timedelta(days=20), min_date_obj)
 
     start_str        = request.args.get("start", default_start.isoformat())
     end_str          = request.args.get("end",   default_end.isoformat())
-    selected_adviser = request.args.get("adviser","team")
     active_tab       = request.args.get("tab","perf")
 
     try:
@@ -694,14 +911,14 @@ def index():
             dates_list = sorted(set(dates_list) | set(all_dates))
             assigned_d, contacted_d, no_contact_d, booked_d = _timed("daily_pipeline", get_daily_pipeline_series, cursor, start, end, dates_list)
 
-        # For weekly mode keep all 7 days (Sun-Sat); for daily/monthly strip weekends
+        # For weekly mode keep weekdays (Mon-Fri); for daily/monthly also strip weekends
         if not is_single_day:
-            span = (end - start).days
-            days_since_sun = (start.weekday() + 1) % 7
-            is_weekly = span <= 6 and days_since_sun == 0
-            if not is_weekly:
-                dates_list = [d for d in dates_list if date.fromisoformat(d).weekday() < 5]
+            dates_list = [d for d in dates_list if date.fromisoformat(d).weekday() < 5]
         appt_today, appt_future = _timed("appointments", get_schedule_appointments, cursor, today)
+        remed_counts, remed_details = _timed("remediations", get_remediation_stats, cursor, start, end)
+        assigned_details = _timed("assigned_details", get_assigned_lead_details, cursor, start, end)
+        cbc_counts = _timed("contact_before_close", get_contact_before_close, cursor, start, end)
+        unassigned_leads = _timed("unassigned_leads", get_unassigned_leads, cursor)
     finally:
         cursor.close(); conn.close()
 
@@ -710,14 +927,13 @@ def index():
         chart_mode = "hourly"
     else:
         span = (end - start).days
-        days_since_sun = (start.weekday() + 1) % 7
-        if span <= 6 and days_since_sun == 0:  # starts on Sunday, ≤7 days
+        if span <= 4 and start.weekday() == 0:  # starts on Monday, ≤5 days
             chart_mode = "weekly"
         else:
             chart_mode = "daily"
 
     months=biz_days/20 if biz_days else 1
-    perf_rows,pipeline_rows,daily_rows=[],[],[]
+    perf_rows,checks_rows=[],[]
 
     for adv in advisers:
         uid=adv["id"]; name=adv["name"]
@@ -740,18 +956,19 @@ def index():
         q2a_pct=apps_count/quotes_count*100 if quotes_count else 0
         talk_per_day_s=talk_secs/days_worked if days_worked else 0
         apps_per_day=apps_count/days_worked if days_worked else 0
-        inf_per_day=inforce_count/biz_days if biz_days else 0
-        avg_inf_day=inforce_value/biz_days if biz_days else 0
+        apps_avg=round(apps_value/apps_count,2) if apps_count else 0
         monthly_inf=inforce_value/months if months else 0
 
         assigned  = pipeline["assigned"].get(uid,0)
         contacted = pipeline["contacted"].get(uid,0)
         booked    = pipeline["booked"].get(uid,0)
         no_contact  = pipeline["no_contact"].get(uid,0)
-        not_booked  = max(contacted-booked, 0)
         conv_ac = round(contacted/assigned*100,1) if assigned else 0
         conv_cb = round(booked/contacted*100,1)   if contacted else 0
         conv_ab = round(booked/assigned*100,1)    if assigned else 0
+
+        _at = appt_today.get(uid,{})  if isinstance(appt_today.get(uid), dict) else {"disc":0,"fu":0,"q":0}
+        _af = appt_future.get(uid,{}) if isinstance(appt_future.get(uid), dict) else {"disc":0,"fu":0,"q":0}
 
         base={"name":name,"user_id":uid,"initials":initials,
               "avatar_color":avatar_color,"avatar_url":avatar_url}
@@ -763,25 +980,24 @@ def index():
             "talk_color":color_talk(talk_per_day_s),
             "quotes_count":quotes_count,"quote_total":quotes_value,"quote_avg":quote_avg,
             "quotes_per_day":round(quotes_per_day,1),"quotes_color":color_quotes(quotes_per_day),
-            "apps_count":apps_count,"apps_value":apps_value,
+            "apps_count":apps_count,"apps_value":apps_value,"apps_avg":apps_avg,
             "apps_per_day":round(apps_per_day,1),"apps_color":color_apps(apps_per_day),
             "q2a_pct":round(q2a_pct,1),
             "inforce_count":inforce_count,"inforce_value":inforce_value,
             "inforce_color":color_inforce(monthly_inf),
-            "inf_per_day":round(inf_per_day,2),"avg_inf_day":avg_inf_day,
+            "assigned":assigned,
+            "remed_pending":remed_counts.get(uid,{}).get("pending",0),
+            "remed_total":remed_counts.get(uid,{}).get("total",0),
         })
-        pipeline_rows.append({**base,
-            "assigned":assigned,"contacted":contacted,"no_contact":no_contact,
-            "booked":booked,"not_booked":not_booked,
+        checks_rows.append({**base,
+            "assigned":assigned,"contacted":contacted,"not_contacted":no_contact,
+            "booked":booked,
+            "quotes_count":quotes_count,"apps_count":apps_count,"apps_value":apps_value,
+            "inforce_count":inforce_count,"inforce_value":inforce_value,
+            "cbc": cbc_counts.get(uid, 0.0),
             "conv_ac":conv_ac,"conv_cb":conv_cb,"conv_ab":conv_ab,
-        })
-        daily_rows.append({**base,
-            "contacted":pipeline["contacted"].get(uid,0),
-            "quotes_count":quotes_count,
-            "apps_count":apps_count,
-            "inforce_count":inforce_count,
-            "appt_today":appt_today.get(uid,0),
-            "appt_future":appt_future.get(uid,0),
+            "today_disc":_at.get("disc",0),"today_fu":_at.get("fu",0),"today_q":_at.get("q",0),
+            "future_disc":_af.get("disc",0),"future_fu":_af.get("fu",0),"future_q":_af.get("q",0),
         })
 
     chart_advisers=[]
@@ -791,39 +1007,29 @@ def index():
         series={
             "uid":uid,"name":adv["name"],
             "initials":(adv["first_name"][0]+adv["last_name"][0]).upper(),
-            "talk_mins":[],"quotes_cnt":[],"apps_cnt":[],"inforce_val":[],"calls_cnt":[],
+            "talk_mins":[],"quotes_cnt":[],"apps_cnt":[],"apps_val":[],"inforce_val":[],"calls_cnt":[],
         }
         for d in dates_list:
             row=udata.get(d,{})
             series["talk_mins"].append(round(int(row.get("talk_time_seconds",0))/60,1))
             series["quotes_cnt"].append(int(row.get("leads_quoted",0)))
             series["apps_cnt"].append(int(row.get("apps_count",0)))
+            series["apps_val"].append(float(row.get("apps_value",0)))
             series["inforce_val"].append(float(row.get("inforce_value",0)))
             series["calls_cnt"].append(ucont.get(d,0))
         chart_advisers.append(series)
-
-    pipeline_chart_advisers=[]
-    for adv in advisers:
-        uid=adv["id"]
-        pipeline_chart_advisers.append({
-            "uid":uid,"name":adv["name"],
-            "assigned":   [assigned_d.get(uid,{}).get(d,0)  for d in dates_list],
-            "contacted":  [contacted_d.get(uid,{}).get(d,0) for d in dates_list],
-            "no_contact": [no_contact_d.get(uid,{}).get(d,0) for d in dates_list],
-            "booked":     [booked_d.get(uid,{}).get(d,0)   for d in dates_list],
-        })
 
     # ── Quick-filter presets (D0, D1, W0, W1, M0, M1) ────────────────────
     # D0 = today, D1 = yesterday
     d0_start = today;           d0_end = today
     d1_start = today - timedelta(days=1); d1_end = d1_start
 
-    # W0 = week-to-date (Sunday–Saturday), W1 = prior full week
-    days_since_sun = (today.weekday() + 1) % 7   # Sun=0 … Sat=6
-    w0_start = max(today - timedelta(days=days_since_sun), min_date_obj)
+    # W0 = week-to-date (Monday–Friday), W1 = prior full week Mon–Fri
+    days_since_mon = today.weekday()              # Mon=0 … Sun=6
+    w0_start = max(today - timedelta(days=days_since_mon), min_date_obj)
     w0_end   = today
-    w1_end   = w0_start - timedelta(days=1)       # Saturday before current week
-    w1_start = max(w1_end - timedelta(days=6), min_date_obj)  # Sunday of prior week
+    w1_end   = w0_start - timedelta(days=3)       # Friday before current week
+    w1_start = max(w1_end - timedelta(days=4), min_date_obj)  # Monday of prior week
 
     # M0 = month-to-date, M1 = prior full month
     m0_start = max(today.replace(day=1), min_date_obj)
@@ -844,17 +1050,23 @@ def index():
     team_avgs = {"talk_mins": round(avg_talk_s/60, 2), "talk_fmt": avg_talk_hm,
                  "qpd": round(avg_qpd, 2), "apd": round(avg_apd, 2)}
 
+    # Parse multi-select adviser param (default excludes Lucas 53)
+    selected_adviser_raw = request.args.get("adviser", "")
+    if selected_adviser_raw:
+        selected_advisers = [s.strip() for s in selected_adviser_raw.split(",") if s.strip()]
+    else:
+        selected_advisers = [str(uid) for uid in sorted(SHOW_USER_IDS) if uid != 53]
+
     total_ms = (time.monotonic() - req_t0) * 1000
     log.info("Dashboard total: %.0f ms", total_ms)
 
     return render_template("dashboard.html",
         start=start.isoformat(), end=end.isoformat(), min_date=MIN_DATE, max_date=db_max_date.isoformat(),
         biz_days=biz_days, months=round(months, 2),
-        perf_rows=perf_rows, pipeline_rows=pipeline_rows, daily_rows=daily_rows,
+        perf_rows=perf_rows, checks_rows=checks_rows,
         dates_list=dates_list,
         chart_advisers=chart_advisers,
-        pipeline_chart_advisers=pipeline_chart_advisers,
-        selected_adviser=selected_adviser, active_tab=active_tab,
+        selected_advisers=selected_advisers, active_tab=active_tab,
         last_refresh=data_updated_str,
         lbd=lbd.isoformat(), today_iso=today.isoformat(),
         d0_start=d0_start.isoformat(), d0_end=d0_end.isoformat(),
@@ -865,6 +1077,11 @@ def index():
         m1_start=m1_start.isoformat(), m1_end=m1_end.isoformat(),
         team_avgs=team_avgs,
         chart_mode=chart_mode,
+        remed_details=remed_details,
+        assigned_details=assigned_details,
+        lead_status=LEAD_STATUS,
+        crm_base_url=CRM_BASE_URL,
+        unassigned_leads=unassigned_leads,
     )
 
 
