@@ -672,10 +672,13 @@ def get_remediation_stats(cursor, start, end):
     return counts, dict(details)
 
 
-# Lead status map (CRM convention)
-LEAD_STATUS = {0: "New", 1: "Open", 2: "Quoted", 3: "Applied", 4: "Lost", 5: "Won"}
-LEAD_STATUS_ACTIVE = {0, 1, 2, 3}   # "Active" tab
-LEAD_STATUS_CLOSED = {4, 5}          # "Closed" tab
+# Lead status map — matches actual CRM pipeline stages
+LEAD_STATUS = {
+    0: "Prospect", 1: "Contacted", 2: "Booked",
+    3: "Quoted", 4: "Applied", 5: "Won", 6: "Lost",
+}
+LEAD_STATUS_ACTIVE = {0, 1, 2, 3, 4}  # "Active" tab
+LEAD_STATUS_CLOSED = {5, 6}            # "Closed" tab
 
 
 def get_assigned_lead_details(cursor, start, end):
@@ -721,47 +724,59 @@ def get_assigned_lead_details(cursor, start, end):
 
 
 def get_contact_before_close(cursor, start, end):
-    """Count 45s+ calls on closed leads (Won/Lost) per adviser.
+    """Average 45s+ calls per closed lead (Won/Lost), per adviser.
 
-    Joins leads → user extension → noojee call records matching the lead's
-    phone number, filtering for calls with duration >= 45 seconds.
+    For each closed lead, counts how many 45s+ calls the adviser made to that
+    lead's phone number, then averages across all closed leads for the adviser.
     """
     cursor.execute(f"""
-        SELECT l.user_id,
-               COUNT(*) AS cbc
-        FROM leads_lead l
-        INNER JOIN account_userprofile up ON up.user_id = l.user_id
-        INNER JOIN noojee_callrecord ncr
-            ON ncr.extension = up.extension
-            AND ncr.phone = REPLACE(REPLACE(l.phone, ' ', ''), '-', '')
-        WHERE l.user_id IN ({_USER_IDS_SQL})
-          AND l.status IN (4, 5)
-          AND l.assigned >= %s AND l.assigned < %s
-          AND ncr.duration >= {CONTACT_THRESHOLD_US}
-          AND ncr.status = 'Hungup'
-        GROUP BY l.user_id
+        SELECT sub.user_id,
+               AVG(sub.calls) AS avg_cbc
+        FROM (
+            SELECT l.user_id,
+                   l.id AS lead_id,
+                   COUNT(ncr.id) AS calls
+            FROM leads_lead l
+            INNER JOIN account_userprofile up ON up.user_id = l.user_id
+            LEFT JOIN noojee_callrecord ncr
+                ON ncr.extension = up.extension
+                AND ncr.phone = REPLACE(REPLACE(l.phone, ' ', ''), '-', '')
+                AND ncr.duration >= {CONTACT_THRESHOLD_US}
+                AND ncr.status = 'Hungup'
+            WHERE l.user_id IN ({_USER_IDS_SQL})
+              AND l.status IN (5, 6)
+              AND l.assigned >= %s AND l.assigned < %s
+            GROUP BY l.user_id, l.id
+        ) sub
+        GROUP BY sub.user_id
     """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
-    return {r["user_id"]: int(r["cbc"]) for r in cursor.fetchall()}
+    return {r["user_id"]: round(float(r["avg_cbc"]), 1) for r in cursor.fetchall()}
 
 
-# User IDs that represent "team" / unassigned accounts (not real advisers)
-UNASSIGNED_USER_IDS = {172, 117, 118, 78, 88}  # Advice_Team, LIP Support, SLG Support, Adviser TBC, SLG Test
-_UNASSIGNED_IDS_SQL = ",".join(str(u) for u in sorted(UNASSIGNED_USER_IDS))
+# ── Unassigned leads: LIP (Ltd) leads not assigned to a consultant ────────
+# Test‑lead filter keywords (matched case-insensitively against first/last name)
+_TEST_NAMES = (
+    "test", "testy", "testing", "fake", "dummy", "sample",
+    "christmas", "donald", "trump", "claus", "asdf", "xxx",
+    "aaa", "zzz", "admin", "temptest",
+)
+_TEST_NAMES_SQL = ",".join(f"'{n}'" for n in _TEST_NAMES)
+
+
+# Consultants whose leads are NOT considered unassigned
+_CONSULTANT_IDS = {181, 182, 183, 152}  # Nate, Sam, Gary B, Rebel
+_CONSULTANT_IDS_SQL = ",".join(str(u) for u in sorted(_CONSULTANT_IDS))
 
 
 def get_unassigned_leads(cursor):
-    """Leads currently assigned to team/support accounts that should be with a real adviser."""
+    """LIP (Ltd) leads not assigned to a consultant (Nate/Sam/Gary B/Rebel),
+       within the last 60 days, excluding test/fake leads."""
     cursor.execute(f"""
         SELECT l.id          AS lead_id,
-               l.user_id     AS current_uid,
-               CONCAT(u.first_name,' ',u.last_name) AS current_user_name,
                CONCAT(l.first_name,' ',l.last_name) AS client_name,
                l.status,
                l.source_code,
                DATE(l.assigned) AS assigned_date,
-               l.admin_id,
-               (SELECT CONCAT(au.first_name,' ',au.last_name)
-                FROM auth_user au WHERE au.id = l.admin_id) AS admin_name,
                (SELECT LEFT(la.note, 500) FROM leads_leadaction la
                 WHERE la.object_id = l.id AND la.object_type = 'lead'
                   AND la.action_type = 'note' AND la.user_id IS NOT NULL
@@ -771,23 +786,24 @@ def get_unassigned_leads(cursor):
                   AND (la.action_type != 'note' OR la.user_id IS NULL)
                 ORDER BY la.created DESC LIMIT 1) AS system_note
         FROM leads_lead l
-        JOIN auth_user u ON u.id = l.user_id
-        WHERE l.user_id IN ({_UNASSIGNED_IDS_SQL})
-          AND l.status IN (0, 1, 2, 3)
+        WHERE l.groups_cache = 'LIP (Ltd)'
+          AND l.status IN (0, 1, 2, 3, 4)
+          AND (l.user_id IS NULL OR l.user_id NOT IN ({_CONSULTANT_IDS_SQL}))
+          AND l.assigned >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
+          AND LOWER(TRIM(l.first_name)) NOT IN ({_TEST_NAMES_SQL})
+          AND LOWER(TRIM(l.last_name))  NOT IN ({_TEST_NAMES_SQL})
+          AND TRIM(l.first_name) != ''
+          AND TRIM(l.last_name)  != ''
         ORDER BY l.assigned ASC
     """)
     leads = []
     for r in cursor.fetchall():
         leads.append({
             "lead_id": r["lead_id"],
-            "current_uid": r["current_uid"],
-            "current_user": (r["current_user_name"] or "").strip(),
             "client_name": (r["client_name"] or "").strip(),
             "status": int(r["status"]),
             "source": (r["source_code"] or "").strip(),
             "assigned_date": str(r["assigned_date"]),
-            "admin_id": r["admin_id"],
-            "admin_name": (r["admin_name"] or "").strip() if r["admin_name"] else "",
             "user_note": (r["user_note"] or "").strip(),
             "system_note": (r["system_note"] or "").strip(),
         })
@@ -978,7 +994,7 @@ def index():
             "booked":booked,
             "quotes_count":quotes_count,"apps_count":apps_count,"apps_value":apps_value,
             "inforce_count":inforce_count,"inforce_value":inforce_value,
-            "cbc": cbc_counts.get(uid, 0),
+            "cbc": cbc_counts.get(uid, 0.0),
             "conv_ac":conv_ac,"conv_cb":conv_cb,"conv_ab":conv_ab,
             "today_disc":_at.get("disc",0),"today_fu":_at.get("fu",0),"today_q":_at.get("q",0),
             "future_disc":_af.get("disc",0),"future_fu":_af.get("fu",0),"future_q":_af.get("q",0),
@@ -1067,44 +1083,6 @@ def index():
         crm_base_url=CRM_BASE_URL,
         unassigned_leads=unassigned_leads,
     )
-
-
-@app.route("/api/assign-lead", methods=["POST"])
-@login_required
-def assign_lead():
-    """Reassign a lead to a different adviser and/or admin."""
-    from flask import jsonify
-    data = request.get_json(force=True) or {}
-    lead_id = data.get("lead_id")
-    adviser_id = data.get("adviser_id")
-    admin_id = data.get("admin_id")
-    if not lead_id:
-        return jsonify({"ok": False, "error": "lead_id required"}), 400
-    conn = None
-    try:
-        conn = get_connection()
-        cur = conn.cursor(dictionary=True)
-        updates, params = [], []
-        if adviser_id is not None:
-            updates.append("user_id = %s")
-            params.append(int(adviser_id))
-        if admin_id is not None:
-            updates.append("admin_id = %s")
-            params.append(int(admin_id))
-        if not updates:
-            return jsonify({"ok": False, "error": "Nothing to update"}), 400
-        params.append(int(lead_id))
-        cur.execute(f"UPDATE leads_lead SET {', '.join(updates)} WHERE id = %s", params)
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({"ok": True})
-    except Exception as e:
-        if conn:
-            try: conn.close()
-            except: pass
-        log.error("[assign_lead] %s", e)
-        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.errorhandler(500)

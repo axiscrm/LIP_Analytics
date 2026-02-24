@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LIP Performance</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -302,10 +303,11 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .remed-status-resolved{background:rgba(18,183,118,.12);color:#059669}
 .remed-empty{text-align:center;padding:48px 24px;color:var(--g400);font-size:13px}
 /* Lead status badges */
-.lead-status-new{background:rgba(59,130,246,.12);color:#2563eb}
-.lead-status-open{background:rgba(139,92,246,.12);color:#7c3aed}
-.lead-status-quoted{background:rgba(234,179,8,.15);color:#b45309}
-.lead-status-applied{background:rgba(217,119,6,.12);color:#c2410c}
+.lead-status-prospect{background:rgba(59,130,246,.12);color:#2563eb}
+.lead-status-contacted{background:rgba(139,92,246,.12);color:#7c3aed}
+.lead-status-booked{background:rgba(234,179,8,.15);color:#b45309}
+.lead-status-quoted{background:rgba(217,119,6,.12);color:#c2410c}
+.lead-status-applied{background:rgba(249,115,22,.12);color:#c2410c}
 .lead-status-won{background:rgba(18,183,118,.12);color:#059669}
 .lead-status-lost{background:rgba(239,68,68,.1);color:#dc2626}
 /* Assigned link in table */
@@ -313,12 +315,6 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 /* Topbar unassigned badge */
 .topbar-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.85);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s;font-family:'Inter',sans-serif;margin-right:4px}
 .topbar-badge:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25)}
-/* Unassigned panel assign controls */
-.unassigned-assign-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
-.unassigned-assign-row select{flex:1;min-width:100px;padding:5px 8px;border:1px solid var(--g200);border-radius:6px;font-size:12px;color:var(--g700);font-family:'Inter',sans-serif;appearance:none;-webkit-appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%2398A2B3' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 6px center;padding-right:22px}
-.unassigned-assign-btn{padding:5px 10px;border:none;border-radius:6px;background:var(--orange);color:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;transition:background .12s}
-.unassigned-assign-btn:hover{background:var(--orange2)}
-.unassigned-assign-btn:disabled{opacity:.5;cursor:not-allowed}
 .unassigned-field-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .unassigned-field-label{font-size:11px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.04em;min-width:60px}
 .unassigned-field-value{font-size:13px;color:var(--g700)}
@@ -525,7 +521,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         {{ cth("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD") }}
         {{ cth("Inforce #","Apps completed (inforce) in the selected period.") }}
         {{ cth("Inforce $","Cumulative commission for completed (inforce) apps.") }}
-        {{ cth("CBC #","Contact Before Close — number of 45s+ calls on leads before they were closed (Won/Lost).") }}
+        {{ cth("AVG CBC","Average 45s+ calls per closed lead (Won/Lost) before close.") }}
         {{ cth("A→C %","Contacted ÷ Assigned × 100. Lead contact rate.") }}
         {{ cth("C→B %","Booked ÷ Contacted × 100. Contact-to-book conversion.") }}
         {{ cth("A→B %","Booked ÷ Assigned × 100. Overall conversion rate.") }}
@@ -575,7 +571,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       <td>{{ ck.asgn }}</td><td>{{ ck.cont }}</td><td>{{ ck.nc }}</td><td>{{ ck.bkd }}</td>
       <td>{{ ck.q }}</td><td>{{ ck.ac }}</td><td>${{ "{:,.0f}".format(ck.av) }}</td>
       <td>{{ ck.ic }}</td><td>${{ "{:,.0f}".format(ck.iv) }}</td>
-      <td>{{ ck.cbc }}</td>
+      <td>{{ "{:.1f}".format(ck.cbc / checks_rows|length) if checks_rows|length else '0.0' }}</td>
       <td class="conv-cell">{{ "{:.1f}".format(ck.cont/ck.asgn*100 if ck.asgn else 0) }}%</td>
       <td class="conv-cell">{{ "{:.1f}".format(ck.bkd/ck.cont*100 if ck.cont else 0) }}%</td>
       <td class="conv-cell">{{ "{:.1f}".format(ck.bkd/ck.asgn*100 if ck.asgn else 0) }}%</td>
@@ -880,10 +876,6 @@ const assignedDetails = {{ assigned_details | tojson }};
 const unassignedLeads = {{ unassigned_leads | tojson }};
 const LEAD_STATUS     = {{ lead_status | tojson }};
 const CRM_BASE        = "{{ crm_base_url }}";
-const ADVISER_OPTIONS = [
-  {id:152,name:'Gary Snelling'},{id:183,name:'Sam Nicholls'},{id:182,name:'Rebel Nicholls'},{id:181,name:'Nate Nicholls'},{id:53,name:'Lucas Kenyon'}
-];
-
 // Build per-adviser inforce target inputs inside modal
 (function(){
   const wrap = document.getElementById('inf-tgt-adviser-inputs');
@@ -1118,13 +1110,13 @@ function recalcChecksFooter(){
   const sum=k=>vis.reduce((s,r)=>s+(parseFloat(r.dataset[k])||0),0);
   const asgn=sum('assigned'),cont=sum('contacted'),nc=sum('nc'),bkd=sum('booked');
   const q=sum('quotes'),ac=sum('apps'),av=sum('appsVal'),ic=sum('infCount'),iv=sum('infVal');
-  const cbc=sum('cbc');
+  const cbcAvg=n?(sum('cbc')/n).toFixed(1):'0.0';
   const td=sum('td'),tf=sum('tf'),tq=sum('tq'),fd=sum('fd'),ff=sum('ff'),fq=sum('fq');
   const fD=v=>'$'+v.toLocaleString('en-AU',{maximumFractionDigits:0});
   const c=tfoot.querySelectorAll('tr td');
   c[0].textContent='Team Total';c[1].textContent=asgn;c[2].textContent=cont;c[3].textContent=nc;c[4].textContent=bkd;
   c[5].textContent=q;c[6].textContent=ac;c[7].textContent=fD(av);c[8].textContent=ic;c[9].textContent=fD(iv);
-  c[10].textContent=cbc;
+  c[10].textContent=cbcAvg;
   c[11].textContent=(asgn?(cont/asgn*100).toFixed(1):'0.0')+'%';
   c[12].textContent=(cont?(bkd/cont*100).toFixed(1):'0.0')+'%';
   c[13].textContent=(asgn?(bkd/asgn*100).toFixed(1):'0.0')+'%';
@@ -1521,9 +1513,9 @@ document.addEventListener('click',function(e){
 });
 
 // ── Assigned Leads slide-in panel ──
-const LEAD_STATUS_CLS={0:'lead-status-new',1:'lead-status-open',2:'lead-status-quoted',3:'lead-status-applied',4:'lead-status-lost',5:'lead-status-won'};
-const LEAD_ACTIVE=new Set([0,1,2,3]);
-const LEAD_CLOSED=new Set([4,5]);
+const LEAD_STATUS_CLS={0:'lead-status-prospect',1:'lead-status-contacted',2:'lead-status-booked',3:'lead-status-quoted',4:'lead-status-applied',5:'lead-status-won',6:'lead-status-lost'};
+const LEAD_ACTIVE=new Set([0,1,2,3,4]);
+const LEAD_CLOSED=new Set([5,6]);
 let _assignedUid=null;
 let _assignedTab='active';
 let _assignedSortAsc=true;
@@ -1720,7 +1712,6 @@ function renderUnassignedCards(items){
     body.innerHTML='<div class="remed-empty">No unassigned leads found.</div>';
     return;
   }
-  const advOpts=ADVISER_OPTIONS.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
   body.innerHTML=items.map((it,idx)=>{
     const stLbl=LEAD_STATUS[it.status]||'Unknown';
     const stCls=LEAD_STATUS_CLS[it.status]||'';
@@ -1729,9 +1720,9 @@ function renderUnassignedCards(items){
     const url=`${CRM_BASE}/leads/${it.lead_id}/`;
     const userNote=it.user_note||'';
     const sysNote=it.system_note||'';
-    return `<div class="remed-card" style="cursor:default">
+    return `<a class="remed-card" href="${url}" target="_blank">
       <div class="remed-card-top">
-        <a href="${url}" target="_blank" class="remed-card-client" style="text-decoration:underline">${clientName}</a>
+        <div class="remed-card-client">${clientName}</div>
         <div class="remed-card-date-wrap">
           <span class="${beaconCls}"></span>
           <span class="remed-card-date">${it.assigned_date}</span>
@@ -1745,14 +1736,6 @@ function renderUnassignedCards(items){
         <div class="remed-card-label">Source</div>
         <div class="remed-card-value">${it.source}</div>
       </div>`:''}
-      <div class="unassigned-field-row">
-        <span class="unassigned-field-label">Adviser</span>
-        <span class="unassigned-field-value">${it.current_user||'—'}</span>
-      </div>
-      <div class="unassigned-field-row">
-        <span class="unassigned-field-label">Admin</span>
-        <span class="unassigned-field-value">${it.admin_name||'—'}</span>
-      </div>
       <div class="remed-accordion">
         <button class="remed-accordion-btn" data-uidx="u${idx}">
           <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1771,11 +1754,7 @@ function renderUnassignedCards(items){
           <div class="remed-accordion-text">${sysNote||'No information provided'}</div>
         </div>
       </div>
-      <div class="unassigned-assign-row">
-        <select id="ua-adv-${it.lead_id}" style="flex:1"><option value="">Assign adviser…</option>${advOpts}</select>
-        <button class="unassigned-assign-btn" onclick="doAssignLead(${it.lead_id},${idx})">Assign</button>
-      </div>
-    </div>`;
+    </a>`;
   }).join('');
 }
 
@@ -1830,7 +1809,7 @@ function openUnassigned(){
 
 function updateUnassignedPanel(){
   const items=getFilteredUnassigned();
-  document.getElementById('unassigned-panel-sub').textContent=items.length+' lead'+(items.length!==1?'s':'')+' need assignment';
+  document.getElementById('unassigned-panel-sub').textContent=items.length+' lead'+(items.length!==1?'s':'')+' not assigned to a consultant';
   renderUnassignedCards(items);
 }
 
@@ -1840,36 +1819,6 @@ function closeUnassigned(){
   document.body.style.overflow='';
   Object.values(_unassignedExpandTimers).forEach(clearTimeout);
   _unassignedExpandTimers={};
-}
-
-function doAssignLead(leadId, cardIdx){
-  const advSel=document.getElementById('ua-adv-'+leadId);
-  const advId=advSel?advSel.value:'';
-  if(!advId){alert('Please select an adviser.');return;}
-  const btn=advSel.parentElement.querySelector('.unassigned-assign-btn');
-  btn.disabled=true;btn.textContent='Assigning…';
-  fetch('/api/assign-lead',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({lead_id:leadId,adviser_id:parseInt(advId)})
-  }).then(r=>r.json()).then(res=>{
-    if(res.ok){
-      // Remove from local array and re-render
-      const idx=unassignedLeads.findIndex(l=>l.lead_id===leadId);
-      if(idx!==-1) unassignedLeads.splice(idx,1);
-      updateUnassignedPanel();
-      // Update badge count
-      document.getElementById('unassigned-label').textContent='Unassigned: '+unassignedLeads.length;
-      const el=document.getElementById('beacon-unassigned');
-      if(el) el.className='beacon '+(unassignedLeads.length>0?'beacon-red':'beacon-green');
-      showToast('Lead assigned successfully');
-    } else {
-      alert('Assignment failed: '+(res.error||'Unknown error'));
-      btn.disabled=false;btn.textContent='Assign';
-    }
-  }).catch(e=>{
-    alert('Network error: '+e.message);
-    btn.disabled=false;btn.textContent='Assign';
-  });
 }
 
 function resetTargets(){
