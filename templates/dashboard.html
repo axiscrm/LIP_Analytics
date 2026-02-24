@@ -236,6 +236,17 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 /* Targets text — hide on mobile */
 .targets-text{display:inline;}
 
+/* Multi-select dropdown */
+.ms-dropdown{position:relative}
+.ms-btn{min-width:160px;justify-content:space-between}
+.ms-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:500;background:#fff;border:1px solid var(--g200);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px 0;min-width:200px;max-height:280px;overflow-y:auto}
+.ms-panel.open{display:block}
+.ms-option{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:13px;color:var(--g700);cursor:pointer;user-select:none;white-space:nowrap}
+.ms-option:hover{background:var(--g50)}
+.ms-option input[type=checkbox]{accent-color:var(--orange);width:15px;height:15px;cursor:pointer}
+.ms-actions{padding:8px 14px 4px;border-top:1px solid var(--g100);margin-top:4px}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+
 /* Column group shading removed */
 @media(max-width:768px){
   /* Header */
@@ -255,7 +266,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   .qf-group{order:3;flex-basis:100%;display:flex;gap:4px;justify-content:space-between}
   .qf-group .btn{flex:1;min-width:0;padding:6px 2px;font-size:12px;justify-content:center;text-align:center}
   /* Row 3: adviser dropdown full width */
-  #adviser-select{width:100%;flex-basis:100%;order:10;height:38px;font-size:14px}
+  .ms-dropdown{width:100%;flex-basis:100%;order:10}
+  .ms-btn{width:100%;height:38px;font-size:14px}
   /* Tabs */
   .tabs{padding:0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .tab{padding:10px 12px;margin-right:12px;font-size:13px;white-space:nowrap}
@@ -387,88 +399,61 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
     <button type="button" class="btn btn-ghost" id="qf-m1" onclick="setQF('m1')">M1</button>
   </div>
   <div class="toolbar-sep"></div>
-  <select name="adviser" id="adviser-select">
-    <option value="team" {% if selected_adviser=='team' %}selected{% endif %}>All Advisers</option>
-    {% for r in perf_rows %}
-    <option value="{{ r.user_id }}" {% if selected_adviser==r.user_id|string %}selected{% endif %}>{{ r.name }}</option>
-    {% endfor %}
-  </select>
+  <input type="hidden" name="adviser" id="adviser-input" value="{% if selected_advisers %}{{ selected_advisers|join(',') }}{% else %}team{% endif %}">
+  <div class="ms-dropdown" id="adviser-dropdown">
+    <button type="button" class="btn btn-ghost ms-btn" id="ms-btn" onclick="toggleAdviserDD()">
+      <span id="ms-label">{% if not selected_advisers %}All Advisers{% elif selected_advisers|length == 1 %}{% for r in perf_rows %}{% if r.user_id|string == selected_advisers[0] %}{{ r.name }}{% endif %}{% endfor %}{% else %}{{ selected_advisers|length }} Advisers{% endif %}</span>
+      <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="ms-panel" id="ms-panel">
+      <label class="ms-option"><input type="checkbox" id="ms-all" onchange="msToggleAll(this.checked)" {% if not selected_advisers %}checked{% endif %}><span>All Advisers</span></label>
+      {% for r in perf_rows %}
+      <label class="ms-option"><input type="checkbox" class="ms-adv" value="{{ r.user_id }}" onchange="msAdvChanged()" {% if not selected_advisers or r.user_id|string in selected_advisers %}checked{% endif %}><span>{{ r.name }}</span></label>
+      {% endfor %}
+      <div class="ms-actions"><button type="button" class="btn btn-primary btn-sm" onclick="msApply()">Apply</button></div>
+    </div>
+  </div>
 </form>
 
 <div class="tabs">
-  <div class="tab" id="tab-perf"     onclick="showTab('perf',this)">Performance Tracker</div>
-  <div class="tab" id="tab-daily"    onclick="showTab('daily',this)">Daily Checks</div>
-  <div class="tab" id="tab-pipeline" onclick="showTab('pipeline',this)">Leads Tracker</div>
+  <div class="tab" id="tab-perf"   onclick="showTab('perf',this)">Performance</div>
+  <div class="tab" id="tab-checks" onclick="showTab('checks',this)">Checks</div>
 </div>
 
 <div class="content">
 
-<!-- ══ DAILY CHECKS ══ -->
-<div id="daily" class="panel">
-  {% set dc = namespace(contacted=0,q=0,a=0,inf=0,at=0,af=0) %}
-  {% for r in daily_rows %}{% set dc.contacted=dc.contacted+r.contacted %}{% set dc.q=dc.q+r.quotes_count %}{% set dc.a=dc.a+r.apps_count %}{% set dc.inf=dc.inf+r.inforce_count %}{% set dc.at=dc.at+r.appt_today %}{% set dc.af=dc.af+r.appt_future %}{% endfor %}
+<!-- ══ CHECKS ══ -->
+<div id="checks" class="panel">
+  {% set ck = namespace(asgn=0,cont=0,nc=0,bkd=0,q=0,ac=0,av=0,ic=0,iv=0,td=0,tf=0,tq=0,fd=0,ff=0,fq=0) %}
+  {% for r in checks_rows %}{% set ck.asgn=ck.asgn+r.assigned %}{% set ck.cont=ck.cont+r.contacted %}{% set ck.nc=ck.nc+r.not_contacted %}{% set ck.bkd=ck.bkd+r.booked %}{% set ck.q=ck.q+r.quotes_count %}{% set ck.ac=ck.ac+r.apps_count %}{% set ck.av=ck.av+r.apps_value %}{% set ck.ic=ck.ic+r.inforce_count %}{% set ck.iv=ck.iv+r.inforce_value %}{% set ck.td=ck.td+r.today_disc %}{% set ck.tf=ck.tf+r.today_fu %}{% set ck.tq=ck.tq+r.today_q %}{% set ck.fd=ck.fd+r.future_disc %}{% set ck.ff=ck.ff+r.future_fu %}{% set ck.fq=ck.fq+r.future_q %}{% endfor %}
 
   <div class="table-outer"><div class="table-scroll"><table>
-    <thead><tr>
-      {% macro dth(label,tip) %}<th><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
-      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
-      {{ dth("Contacted","Calls with a duration of 5 seconds or more.") }}
-      {{ dth("Quotes #","Distinct leads quoted in the selected period.") }}
-      {{ dth("Apps #","Applications created in the selected period.") }}
-      {{ dth("Inforce #","Apps completed (inforce) in the selected period.") }}
-      {{ dth("Today's Appts","Appointments scheduled for today from the CRM calendar (leads_leadschedule tasks).") }}
-      {{ dth("Future Appts","All appointments scheduled from tomorrow onwards in the CRM calendar.") }}
-    </tr></thead>
-    <tbody>
-      {% for r in daily_rows %}
-      <tr class="adviser-row" data-uid="{{ r.user_id }}">
-        <td><div class="avatar-cell">
-          {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
-          {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
-          <span class="adviser-name">{{ r.name }}</span>
-        </div></td>
-        <td>{{ r.contacted }}</td>
-        <td>{{ r.quotes_count }}</td>
-        <td>{{ r.apps_count }}</td>
-        <td>{{ r.inforce_count }}</td>
-        <td>{{ r.appt_today }}</td>
-        <td>{{ r.appt_future }}</td>
+    <thead>
+      <tr>
+        <th style="min-width:180px" rowspan="2"><div class="th-inner">Adviser</div></th>
+        {% macro cth(label,tip) %}<th rowspan="2"><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
+        {{ cth("Assigned","Total leads assigned to this adviser in the period.") }}
+        {{ cth("Contacted","Calls with a duration of 45 seconds or more.") }}
+        {{ cth("Not Contacted","Calls with a duration of less than 45 seconds.") }}
+        {{ cth("Booked","Of assigned leads: received the Life Insurance Questions document.") }}
+        {{ cth("Quotes #","Distinct leads quoted in the selected period.") }}
+        {{ cth("Apps #","Applications created in the selected period.") }}
+        {{ cth("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD") }}
+        {{ cth("Inforce #","Apps completed (inforce) in the selected period.") }}
+        {{ cth("Inforce $","Sum of premium for completed apps.") }}
+        {{ cth("A→C %","Contacted ÷ Assigned × 100. Lead contact rate.") }}
+        {{ cth("C→B %","Booked ÷ Contacted × 100. Contact-to-book conversion.") }}
+        {{ cth("A→B %","Booked ÷ Assigned × 100. Overall conversion rate.") }}
+        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Today's Appts</div></th>
+        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Future Appts</div></th>
       </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot id="daily-total-row"><tr>
-      <td>Team Total</td>
-      <td>{{ daily_rows | sum(attribute='contacted') }}</td><td>{{ dc.q }}</td><td>{{ dc.a }}</td>
-      <td>{{ dc.inf }}</td><td>{{ dc.at }}</td><td>{{ dc.af }}</td>
-    </tr></tfoot>
-  </table></div></div>
-
-  <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Contacted</div></div><div class="chart-card-total" id="kpi-dc-called">—</div><div class="chart-card-sub">assigned leads contacted per day</div><div class="chart-wrap"><canvas id="chart-dc-called"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Quotes</div></div><div class="chart-card-total" id="kpi-dc-quotes">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-quotes"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Apps</div></div><div class="chart-card-total" id="kpi-dc-apps">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-apps"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce</div></div><div class="chart-card-total" id="kpi-dc-inforce">—</div><div class="chart-card-sub">per day</div><div class="chart-wrap"><canvas id="chart-dc-inforce"></canvas></div></div>
-  </div>
-</div><!-- /daily panel -->
-
-<!-- ══ LEADS TRACKER ══ -->
-<div id="pipeline" class="panel">
-  {% set pl = namespace(asgn=0,cont=0,nc=0,bkd=0,nb=0) %}
-  {% for r in pipeline_rows %}{% set pl.asgn=pl.asgn+r.assigned %}{% set pl.cont=pl.cont+r.contacted %}{% set pl.nc=pl.nc+r.no_contact %}{% set pl.bkd=pl.bkd+r.booked %}{% set pl.nb=pl.nb+r.not_booked %}{% endfor %}
-  <div class="table-outer"><div class="table-scroll"><table>
-    <thead><tr>
-      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
-      <th><div class="th-inner">Assigned<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Total leads assigned to this adviser in the period.</div></div></div></th>
-      <th><div class="th-inner">Contacted<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Calls with a duration of 5 seconds or more in the period.</div></div></div></th>
-      <th><div class="th-inner">No Contact<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Calls with a duration of less than 5 seconds — likely unanswered or hung up immediately.</div></div></div></th>
-      <th><div class="th-inner">Booked<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Of assigned leads: received the Life Insurance Questions document (anytime on that lead).</div></div></div></th>
-      <th><div class="th-inner">Not Booked<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Contacted leads that have not yet received the LIQ document.</div></div></div></th>
-      <th><div class="th-inner">A→C %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Contacted ÷ Assigned × 100. Lead contact rate.</div></div></div></th>
-      <th><div class="th-inner">C→B %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Booked ÷ Contacted × 100. Contact-to-book conversion.</div></div></div></th>
-      <th><div class="th-inner">A→B %<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Booked ÷ Assigned × 100. Overall conversion rate.</div></div></div></th>
-    </tr></thead>
-    <tbody id="pipeline-tbody">
-      {% for r in pipeline_rows %}
+      <tr>
+        <th><div class="th-inner">Disc</div></th><th><div class="th-inner">F/U</div></th><th><div class="th-inner">Q</div></th>
+        <th><div class="th-inner">Disc</div></th><th><div class="th-inner">F/U</div></th><th><div class="th-inner">Q</div></th>
+      </tr>
+    </thead>
+    <tbody id="checks-tbody">
+      {% for r in checks_rows %}
       <tr class="adviser-row" data-uid="{{ r.user_id }}">
         <td><div class="avatar-cell">
           {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
@@ -477,35 +462,42 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         </div></td>
         <td>{{ r.assigned }}</td>
         <td>{{ r.contacted }}</td>
-        <td>{{ r.no_contact }}</td>
+        <td>{{ r.not_contacted }}</td>
         <td>{{ r.booked }}</td>
-        <td>{{ r.not_booked }}</td>
+        <td>{{ r.quotes_count }}</td>
+        <td>{{ r.apps_count }}</td>
+        <td>${{ "{:,.0f}".format(r.apps_value) }}</td>
+        <td>{{ r.inforce_count }}</td>
+        <td>${{ "{:,.0f}".format(r.inforce_value) }}</td>
         <td class="conv-cell">{{ r.conv_ac }}%</td>
         <td class="conv-cell">{{ r.conv_cb }}%</td>
         <td class="conv-cell">{{ r.conv_ab }}%</td>
+        <td>{{ r.today_disc }}</td><td>{{ r.today_fu }}</td><td>{{ r.today_q }}</td>
+        <td>{{ r.future_disc }}</td><td>{{ r.future_fu }}</td><td>{{ r.future_q }}</td>
       </tr>
       {% endfor %}
     </tbody>
-    <tfoot><tr>
+    <tfoot id="checks-total-row"><tr>
       <td>Team Total</td>
-      <td>{{ pl.asgn }}</td><td>{{ pl.cont }}</td><td>{{ pl.nc }}</td>
-      <td>{{ pl.bkd }}</td><td>{{ pl.nb }}</td>
-      <td class="conv-cell">{{ "{:.1f}".format(pl.cont/pl.asgn*100 if pl.asgn else 0) }}%</td>
-      <td class="conv-cell">{{ "{:.1f}".format(pl.bkd/pl.cont*100 if pl.cont else 0) }}%</td>
-      <td class="conv-cell">{{ "{:.1f}".format(pl.bkd/pl.asgn*100 if pl.asgn else 0) }}%</td>
+      <td>{{ ck.asgn }}</td><td>{{ ck.cont }}</td><td>{{ ck.nc }}</td><td>{{ ck.bkd }}</td>
+      <td>{{ ck.q }}</td><td>{{ ck.ac }}</td><td>${{ "{:,.0f}".format(ck.av) }}</td>
+      <td>{{ ck.ic }}</td><td>${{ "{:,.0f}".format(ck.iv) }}</td>
+      <td class="conv-cell">{{ "{:.1f}".format(ck.cont/ck.asgn*100 if ck.asgn else 0) }}%</td>
+      <td class="conv-cell">{{ "{:.1f}".format(ck.bkd/ck.cont*100 if ck.cont else 0) }}%</td>
+      <td class="conv-cell">{{ "{:.1f}".format(ck.bkd/ck.asgn*100 if ck.asgn else 0) }}%</td>
+      <td>{{ ck.td }}</td><td>{{ ck.tf }}</td><td>{{ ck.tq }}</td>
+      <td>{{ ck.fd }}</td><td>{{ ck.ff }}</td><td>{{ ck.fq }}</td>
     </tr></tfoot>
   </table></div></div>
 
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Assigned</div></div><div class="chart-card-total" id="kpi-assigned">—</div><div class="chart-card-sub">leads assigned per day</div><div class="chart-wrap"><canvas id="chart-assigned"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Contacted</div></div><div class="chart-card-total" id="kpi-contacted">—</div><div class="chart-card-sub">calls ≥ 5 seconds per day</div><div class="chart-wrap"><canvas id="chart-contacted"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">No Contact</div></div><div class="chart-card-total" id="kpi-nocontact">—</div><div class="chart-card-sub">calls &lt; 5 seconds per day</div><div class="chart-wrap"><canvas id="chart-nocontact"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Booked</div></div><div class="chart-card-total" id="kpi-booked">—</div><div class="chart-card-sub">LIQ document sent</div><div class="chart-wrap"><canvas id="chart-booked"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Applications $</div></div><div class="chart-card-total" id="kpi-checks-apps">—</div><div class="chart-card-sub">cumulative application commission</div><div class="chart-wrap"><canvas id="chart-checks-apps"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div></div><div class="chart-card-total" id="kpi-checks-inf">—</div><div class="chart-card-sub">cumulative inforce premium</div><div class="chart-wrap"><canvas id="chart-checks-inf"></canvas></div></div>
   </div>
-</div><!-- /pipeline panel -->
+</div><!-- /checks panel -->
 <div id="perf" class="panel">
-  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0,ipd=0,aipd=0) %}
-  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% set t.ipd=t.ipd+r.inf_per_day %}{% set t.aipd=t.aipd+r.avg_inf_day %}{% endfor %}
+  {% set t = namespace(days=0,q=0,qval=0,apps=0,aval=0,inf=0,ival=0,n=0,talk_s=0,talk_total_s=0,qpd=0,apd=0,asgn=0) %}
+  {% for r in perf_rows %}{% set t.n=t.n+1 %}{% set t.days=t.days+r.days_worked %}{% set t.talk_total_s=t.talk_total_s+r.talk_time_s %}{% set t.q=t.q+r.quotes_count %}{% set t.qval=t.qval+r.quote_total %}{% set t.apps=t.apps+r.apps_count %}{% set t.aval=t.aval+r.apps_value %}{% set t.inf=t.inf+r.inforce_count %}{% set t.ival=t.ival+r.inforce_value %}{% set t.talk_s=t.talk_s+r.talk_per_day_s %}{% set t.qpd=t.qpd+r.quotes_per_day %}{% set t.apd=t.apd+r.apps_per_day %}{% set t.asgn=t.asgn+r.assigned %}{% endfor %}
 
   <div class="legend">
     <span class="legend-item"><span class="beacon beacon-on"></span>On target</span>
@@ -518,6 +510,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       {% macro th(label,tip,cg='') %}<th {% if cg %}data-cg="{{ cg }}"{% endif %}><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
       <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
       <th><div class="th-inner">Days<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Business days where adviser made at least 1 call or sent at least 1 quote.</div></div></div></th>
+      {{ th("Assigned","Total leads assigned to this adviser in the period.") }}
       {{ th("Talk Time","Total call duration via noojee_callrecord.","b") }}
       {{ th("Talk / Day","Total talk time ÷ days worked. Threshold-highlighted.","b") }}
       {{ th("Quotes #","Distinct leads quoted (last quote per lead).","c") }}
@@ -525,13 +518,12 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       {{ th("Quote Avg $","Quote Total ÷ Quotes count.","c") }}
       {{ th("Quotes / Day","Quotes ÷ days worked. Threshold-highlighted.","c") }}
       {{ th("Apps #","Applications created in period.","d") }}
-      {{ th("Apps $","Sum of application premium in period.","d") }}
+      {{ th("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD","d") }}
+      {{ th("APPS AVG $","Application commission ÷ number of applications.","d") }}
       {{ th("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
       {{ th("Q-App %","Apps ÷ Quotes × 100.","d") }}
       {{ th("Inforce #","Apps completed in period.","d") }}
       {{ th("Inforce $","Sum of premium for completed apps. Threshold-highlighted.","d") }}
-      {{ th("Inf / Day","Inforce count ÷ total business days.","d") }}
-      {{ th("Avg Inf/Day $","Inforce value ÷ total business days.","d") }}
     </tr></thead>
     <tbody id="perf-tbody">
       {% for r in perf_rows %}
@@ -546,6 +538,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
           <span class="adviser-name">{{ r.name }}</span>
         </div></td>
         <td>{{ r.days_worked }}</td>
+        <td>{{ r.assigned }}</td>
         <td data-cg="b">{{ r.talk_time }}</td>
         <td data-cg="b"><span class="badge badge-{{ r.talk_color }}" data-badge="talk">{{ r.talk_per_day }}</span></td>
         <td data-cg="c">{{ r.quotes_count }}</td>
@@ -554,12 +547,11 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         <td data-cg="c"><span class="badge badge-{{ r.quotes_color }}" data-badge="qpd">{{ r.quotes_per_day }}</span></td>
         <td data-cg="d">{{ r.apps_count }}</td>
         <td data-cg="d">${{ "{:,.0f}".format(r.apps_value) }}</td>
+        <td data-cg="d">${{ "{:,.0f}".format(r.apps_avg) }}</td>
         <td data-cg="d"><span class="badge badge-{{ r.apps_color }}" data-badge="apd">{{ r.apps_per_day }}</span></td>
         <td data-cg="d">{{ r.q2a_pct }}%</td>
         <td data-cg="d">{{ r.inforce_count }}</td>
         <td data-cg="d"><span class="badge badge-{{ r.inforce_color }}" data-badge="inf">${{ "{:,.0f}".format(r.inforce_value) }}</span></td>
-        <td data-cg="d">{{ r.inf_per_day }}</td>
-        <td data-cg="d">${{ "{:,.0f}".format(r.avg_inf_day) }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -569,20 +561,19 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       data-apd="{{ '{:.1f}'.format(t.apd/t.n if t.n else 0) }}"
       data-inf="{{ t.ival }}"><tr>
       <td>Team Total</td><td>{{ t.days }}</td>
+      <td>{{ t.asgn }}</td>
       <td data-cg="b">{% if t.talk_total_s %}{{ "%d:%02d:%02d"|format((t.talk_total_s//3600)|int,((t.talk_total_s%3600)//60)|int,(t.talk_total_s%60)|int) }}{% else %}—{% endif %}</td>
       <td data-cg="b">{% if t.n %}{% set avg_talk_s = t.talk_s / t.n %}{{ "%d:%02d"|format((avg_talk_s//3600)|int, ((avg_talk_s%3600)//60)|int) }}{% else %}—{% endif %}</td>
       <td data-cg="c">{{ t.q }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval) }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval/t.q if t.q else 0) }}</td><td data-cg="c">{{ "{:.1f}".format(t.qpd / t.n if t.n else 0) }}</td>
-      <td data-cg="d">{{ t.apps }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ t.apps }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval) }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval/t.apps if t.apps else 0) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
       <td data-cg="d">{{ "{:.1f}".format(t.apps/t.q*100 if t.q else 0) }}%</td>
-      <td data-cg="d">{{ t.inf }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td><td data-cg="d">{{ "{:.1f}".format(t.ipd / t.n if t.n else 0) }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aipd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ t.inf }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td>
     </tr></tfoot>
   </table></div></div>
 
   <div class="chart-grid">
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Talk / Day</div><span class="beacon" id="beacon-talk"></span></div><div class="chart-card-total" id="kpi-talk">—</div><div class="chart-card-sub" id="sub-talk">avg per day</div><div class="chart-wrap"><canvas id="chart-talk"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Quotes / Day</div><span class="beacon" id="beacon-qpd"></span></div><div class="chart-card-total" id="kpi-qpd">—</div><div class="chart-card-sub" id="sub-qpd">avg per day</div><div class="chart-wrap"><canvas id="chart-qpd"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Apps / Day</div><span class="beacon" id="beacon-apd"></span></div><div class="chart-card-total" id="kpi-apd">—</div><div class="chart-card-sub" id="sub-apd">avg per day</div><div class="chart-wrap"><canvas id="chart-apd"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-inf"></span></div><div class="chart-card-total" id="kpi-inf">—</div><div class="chart-card-sub" id="sub-inf">total inforce premium</div><div class="chart-wrap"><canvas id="chart-inf"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Applications $</div></div><div class="chart-card-total" id="kpi-perf-apps">—</div><div class="chart-card-sub">cumulative application commission</div><div class="chart-wrap"><canvas id="chart-perf-apps"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-perf-inf"></span></div><div class="chart-card-total" id="kpi-perf-inf">—</div><div class="chart-card-sub">cumulative inforce premium</div><div class="chart-wrap"><canvas id="chart-perf-inf"></canvas></div></div>
   </div>
 </div>
 
@@ -704,9 +695,11 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 <script>
 // ── Flask data ──
 const dates           = {{ dates_list | tojson }};
-const MONTHS          = {{ months }};  // period length in months (biz_days/20)
-const TEAM_AVGS       = {{ team_avgs | tojson }};  // server-computed, matches tfoot exactly
+const MONTHS          = {{ months }};
+const TEAM_AVGS       = {{ team_avgs | tojson }};
 const allAdvisers     = {{ chart_advisers | tojson }};
+const checksRawData   = {{ checks_rows | tojson }};
+
 // Build per-adviser inforce target inputs inside modal
 (function(){
   const wrap = document.getElementById('inf-tgt-adviser-inputs');
@@ -720,8 +713,16 @@ const allAdvisers     = {{ chart_advisers | tojson }};
     </div>`;
   });
 })();
-const allPipeAdvisers = {{ pipeline_chart_advisers | tojson }};
-const selectedAdviser = "{{ selected_adviser }}";
+
+// ── Multi-select: parse initial selection from hidden input ──
+const selectedAdvisers = new Set();
+(function(){
+  const val = document.getElementById('adviser-input').value;
+  if(val && val !== 'team'){
+    val.split(',').forEach(id=>{ const n=parseInt(id); if(!isNaN(n)) selectedAdvisers.add(n); });
+  }
+})();
+
 const QF = {
   d0:{start:"{{ d0_start }}",end:"{{ d0_end }}"},
   d1:{start:"{{ d1_start }}",end:"{{ d1_end }}"},
@@ -734,14 +735,14 @@ const QF = {
 // ── Targets ──
 const DEFAULTS={
   talkTgt:150,showTalkTgt:true,qTgt:6,showQTgt:true,aTgt:2,showATgt:true,
-  infTgts:{181:20000,182:20000,183:20000,152:20000},showInfTgt:true,
+  infTgts:{181:20000,182:20000,183:20000,152:20000,53:20000},showInfTgt:true,
   showAvgTalk:true,showAvgQ:true,showAvgA:true,showAvgInf:true,avgLineColor:'#7f56d9',
   talkLineColor:'#7f56d9',qLineColor:'#7f56d9',aLineColor:'#7f56d9',infLineColor:'#7f56d9',
   talkTgtColor:'#12B76A',qTgtColor:'#12B76A',aTgtColor:'#12B76A',infTgtColor:'#12B76A',
   talkOn:150,talkNear:120,qOn:6,qNear:4,aOn:2,aNear:1,infOn:20000,infNear:15000,
   onColor:'#12B76A',onEnabled:true,nearColor:'#EAB308',nearEnabled:true,belowColor:'#B42318',belowEnabled:true,
 };
-// ── Settings: load from server on page load, fall back to DEFAULTS ──────────
+// ── Settings: load from server on page load, fall back to DEFAULTS ──
 let T = {...DEFAULTS};
 (function(){
   const xhr = new XMLHttpRequest();
@@ -782,7 +783,7 @@ function showTab(id,el){
 }
 (function(){
   const raw="{{ active_tab }}";
-  const id=(raw==='perf'||raw==='daily'||raw==='pipeline')?raw:'perf';
+  const id=(raw==='perf'||raw==='checks')?raw:'perf';
   const te=document.getElementById('tab-'+id),pe=document.getElementById(id);
   if(te&&pe){te.classList.add('active');pe.classList.add('active');}
   else{document.getElementById('tab-perf').classList.add('active');document.getElementById('perf').classList.add('active');}
@@ -793,9 +794,10 @@ function showLoading(){document.getElementById('loading-overlay').classList.add(
 
 // ── Auto-submit ──
 function submitForm(){showLoading();document.getElementById('filter-form').submit();}
+
 // ── Date popover ──
-const TODAY_STR = "{{ today_iso }}";   // today (max allowed date)
-const MIN_STR = "{{ min_date }}";     // earliest allowed date
+const TODAY_STR = "{{ today_iso }}";
+const MIN_STR = "{{ min_date }}";
 
 function toggleDatePicker(){
   const p=document.getElementById('date-popover');
@@ -823,9 +825,7 @@ function validatePopDates(){
   warn.style.display='none';return true;
 }
 ['pop-start','pop-end'].forEach(id=>{
-  document.getElementById(id).addEventListener('change',()=>{
-    validatePopDates();
-  });
+  document.getElementById(id).addEventListener('change',()=>{ validatePopDates(); });
 });
 
 function fmtDateLabel(iso){const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);}
@@ -841,8 +841,7 @@ function applyDatePicker(){
   ['d0','d1','w0','w1','m0','m1'].forEach(k=>document.getElementById('qf-'+k).classList.remove('active-filter'));
   submitForm();
 }
-
-// Close popover on outside click
+// Close date popover on outside click
 document.addEventListener('click',e=>{
   const pop=document.getElementById('date-popover');
   const btn=document.getElementById('period-btn');
@@ -859,7 +858,35 @@ function showToast(msg){
   toastTimer=setTimeout(()=>t.classList.remove('show'),4000);
 }
 
-document.getElementById('adviser-select').addEventListener('change',submitForm);
+// ── Multi-select dropdown ──
+function toggleAdviserDD(){
+  const panel=document.getElementById('ms-panel');
+  panel.classList.toggle('open');
+}
+function msToggleAll(checked){
+  document.querySelectorAll('.ms-adv').forEach(cb=>cb.checked=checked);
+}
+function msAdvChanged(){
+  const all=document.querySelectorAll('.ms-adv');
+  const allChecked=[...all].every(cb=>cb.checked);
+  document.getElementById('ms-all').checked=allChecked;
+}
+function msApply(){
+  const all=document.getElementById('ms-all').checked;
+  const checked=[...document.querySelectorAll('.ms-adv:checked')].map(cb=>cb.value);
+  document.getElementById('adviser-input').value=all?'team':checked.join(',');
+  document.getElementById('ms-panel').classList.remove('open');
+  submitForm();
+}
+// Close adviser dropdown on outside click
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('adviser-dropdown');
+  if(dd && !dd.contains(e.target)){
+    document.getElementById('ms-panel').classList.remove('open');
+  }
+});
+
+// ── Quick filter ──
 function setQF(key){
   const f=QF[key];
   document.getElementById('start-input').value=f.start;
@@ -874,15 +901,18 @@ function setQF(key){
   ['d0','d1','w0','w1','m0','m1'].forEach(k=>{if(QF[k].start===s&&QF[k].end===e)document.getElementById('qf-'+k).classList.add('active-filter');});
 })();
 
-// ── Row filter ──
-(function(){
+// ── Row filter (multi-select) ──
+function filterRows(){
+  const showAll = selectedAdvisers.size===0;
   document.querySelectorAll('.adviser-row').forEach(r=>{
-    r.style.display=(selectedAdviser==='team'||r.dataset.uid===selectedAdviser)?'':'none';
+    r.style.display=(showAll||selectedAdvisers.has(parseInt(r.dataset.uid)))?'':'none';
   });
-  ['team-total-row','daily-total-row'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display=selectedAdviser==='team'?'':'none';
+  // Show Jinja footer only when all selected; otherwise recalc
+  ['team-total-row','checks-total-row'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display=showAll?'':'none';
   });
-})();
+}
+filterRows();
 
 // ── Tooltip ──
 function posTip(icon){
@@ -932,8 +962,7 @@ let labels;
 if(CHART_MODE==='hourly'){
   labels=dates.map(h=>{const hr=parseInt(h);return hr===0?'12am':hr<12?hr+'am':hr===12?'12pm':(hr-12)+'pm';});
 }else if(CHART_MODE==='weekly'){
-  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  labels=dates.map(d=>dayNames[new Date(d+'T00:00:00').getDay()]);
+  labels=dates.map(d=>{const dn=new Date(d+'T00:00:00').getDay();return['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dn];});
 }else{
   labels=dates.map(d=>{const p=d.split('-');return p[2]+'/'+p[1];});
 }
@@ -981,28 +1010,25 @@ function buildLine(cid,data,name,yFmt,tgtVal,showTgt,lineColor,tgtColor,avgVal,a
   }});
 }
 
-function getPerfS(){
-  if(selectedAdviser==='team'){
-    const n=allAdvisers.length||1;
-    return{name:'Team Avg',
-      talk_mins:  dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.talk_mins[i]||0),0)/n),
-      quotes_cnt: dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.quotes_cnt[i]||0),0)/n),
-      apps_cnt:   dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.apps_cnt[i]||0),0)/n),
-      inforce_val:dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.inforce_val[i]||0),0)), // inforce stays as team total
-      calls_cnt:  dates.map((_,i)=>allAdvisers.reduce((s,a)=>s+(a.calls_cnt[i]||0),0)/n),
-    };
-  }
-  const uid=parseInt(selectedAdviser);
-  return allAdvisers.find(a=>a.uid===uid)||{name:'—',talk_mins:[],quotes_cnt:[],apps_cnt:[],inforce_val:[],calls_cnt:[]};
+// ── Cumulative helper ──
+function cumulative(arr){
+  return arr.reduce((acc,v,i)=>{acc.push((acc[i-1]||0)+v);return acc;},[]);
 }
-function getPipeS(){
-  if(selectedAdviser==='team'){
-    const ks=['assigned','contacted','no_contact','booked'],agg={};
-    ks.forEach(k=>agg[k]=dates.map((_,i)=>allPipeAdvisers.reduce((s,a)=>s+(a[k][i]||0),0)));
-    return{name:'Team',...agg};
-  }
-  const uid=parseInt(selectedAdviser);
-  return allPipeAdvisers.find(a=>a.uid===uid)||{name:'—',assigned:[],contacted:[],no_contact:[],booked:[]};
+
+// ── Aggregation: multi-select aware ──
+function getPerfS(){
+  const chosen = selectedAdvisers.size===0 ? allAdvisers : allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
+  if(!chosen.length) return{name:'—',talk_mins:[],quotes_cnt:[],apps_cnt:[],apps_val:[],inforce_val:[],calls_cnt:[]};
+  const n=chosen.length;
+  return{
+    name: n===1 ? chosen[0].name : 'Team',
+    talk_mins:   dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.talk_mins[i]||0),0)/n),
+    quotes_cnt:  dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.quotes_cnt[i]||0),0)/n),
+    apps_cnt:    dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.apps_cnt[i]||0),0)/n),
+    apps_val:    dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.apps_val[i]||0),0)),
+    inforce_val: dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.inforce_val[i]||0),0)),
+    calls_cnt:   dates.map((_,i)=>chosen.reduce((s,a)=>s+(a.calls_cnt[i]||0),0)/n),
+  };
 }
 
 function fmtMins(m){const h=Math.floor(m/60),mn=Math.round(m%60);return h+':'+String(mn).padStart(2,'0');}
@@ -1012,79 +1038,50 @@ function total(arr){return arr.reduce((s,v)=>s+v,0);}
 
 function rebuildCharts(){
   applyCSS();
-  const ps=getPerfS(),pip=getPipeS();
+  const ps=getPerfS();
 
-  // Daily checks charts — use same line colour as performance tab
-  const dcLC=T.talkLineColor;
-  buildLine('chart-dc-called',ps.calls_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
-  document.getElementById('kpi-dc-called').textContent=total(ps.calls_cnt);
-  buildLine('chart-dc-quotes',ps.quotes_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
-  document.getElementById('kpi-dc-quotes').textContent=total(ps.quotes_cnt);
-  buildLine('chart-dc-apps',ps.apps_cnt,ps.name,v=>v.toFixed(0),null,false,dcLC);
-  document.getElementById('kpi-dc-apps').textContent=total(ps.apps_cnt);
-  buildLine('chart-dc-inforce',ps.inforce_val,ps.name,fmtMoney,null,false,dcLC);
-  document.getElementById('kpi-dc-inforce').textContent=fmtMoney(total(ps.inforce_val));
-  // Appts — scalar counts from server (not time-series)
-  const dcAt={{ daily_rows | sum(attribute='appt_today') }};
-  const dcAtm={{ daily_rows | sum(attribute='appt_future') }};
+  // ── Cumulative data ──
+  const cumAppsVal = cumulative(ps.apps_val);
+  const cumInfVal  = cumulative(ps.inforce_val);
+  const totApps = total(ps.apps_val);
+  const totInf  = total(ps.inforce_val);
 
-  // Performance charts
-  // KPI values read directly from the table — team uses tfoot, individual uses their row.
-  // This guarantees charts match the table exactly, no separate math.
-  function getTableRow(){
-    if(selectedAdviser==='team') return document.getElementById('team-total-row');
-    return document.querySelector(`#perf-tbody tr[data-uid="${selectedAdviser}"]`);
-  }
-  const trow = getTableRow();
-  const tTalkMins = trow ? parseFloat(trow.dataset.talkMins||0) : 0;
-  const tQpd      = trow ? parseFloat(trow.dataset.qpd||0)       : 0;
-  const tApd      = trow ? parseFloat(trow.dataset.apd||0)       : 0;
-  const tInf      = trow ? parseFloat(trow.dataset.inf||0)       : 0;
-
-  buildLine('chart-talk',ps.talk_mins,ps.name,fmtMins,T.talkTgt,T.showTalkTgt,T.talkLineColor,T.talkTgtColor,tTalkMins,T.avgLineColor,T.showAvgTalk);
-  document.getElementById('kpi-talk').textContent=fmtMins(tTalkMins);
-  document.getElementById('sub-talk').textContent=`avg per day · target ${fmtMins(T.talkTgt)}`;
-  setBeacon('beacon-talk',tTalkMins,T.talkOn,T.talkNear);
-
-  buildLine('chart-qpd',ps.quotes_cnt,ps.name,v=>v.toFixed(0),T.qTgt,T.showQTgt,T.qLineColor,T.qTgtColor,tQpd,T.avgLineColor,T.showAvgQ);
-  document.getElementById('kpi-qpd').textContent=tQpd.toFixed(1);
-  document.getElementById('sub-qpd').textContent=`avg per day · target ${T.qTgt}`;
-  setBeacon('beacon-qpd',tQpd,T.qOn,T.qNear);
-
-  buildLine('chart-apd',ps.apps_cnt,ps.name,v=>v.toFixed(0),T.aTgt,T.showATgt,T.aLineColor,T.aTgtColor,tApd,T.avgLineColor,T.showAvgA);
-  document.getElementById('kpi-apd').textContent=tApd.toFixed(1);
-  document.getElementById('sub-apd').textContent=`avg per day · target ${T.aTgt}`;
-  setBeacon('beacon-apd',tApd,T.aOn,T.aNear);
-
-  // Inforce $ chart — daily values
-  // Per-adviser inforce target — team sums all, individual uses their own
+  // ── Inforce target (multi-select aware) ──
+  const chosen = selectedAdvisers.size===0 ? allAdvisers : allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
   let infScaledTgt;
-  if(selectedAdviser==='team'){
-    infScaledTgt = allAdvisers.reduce((s,a)=>(s+(T.infTgts[a.uid]||20000)),0);
+  if(chosen.length>1 || selectedAdvisers.size===0){
+    infScaledTgt = chosen.reduce((s,a)=>s+(T.infTgts[a.uid]||20000),0);
+  } else if(chosen.length===1){
+    infScaledTgt = T.infTgts[chosen[0].uid]||20000;
   } else {
-    infScaledTgt = (T.infTgts[parseInt(selectedAdviser)]||20000);
+    infScaledTgt = 20000;
   }
-  const totInf = tInf;
-  buildLine('chart-inf',ps.inforce_val,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor,totInf,T.avgLineColor,T.showAvgInf);
-  document.getElementById('kpi-inf').textContent=fmtMoney(totInf);
-  document.getElementById('sub-inf').textContent=`per day · target ${fmtMoney(infScaledTgt)} total`;
-  setBeacon('beacon-inf',totInf,infScaledTgt,infScaledTgt*0.75);
 
-  // Leads funnel charts — use same line colour as performance tab
-  const pLine=(cid,kid,arr)=>{buildLine(cid,arr,pip.name,v=>v.toFixed(0),null,false,T.talkLineColor);document.getElementById(kid).textContent=total(arr);};
-  pLine('chart-assigned','kpi-assigned',pip.assigned);
-  pLine('chart-contacted','kpi-contacted',pip.contacted);
-  pLine('chart-nocontact','kpi-nocontact',pip.no_contact);
-  pLine('chart-booked','kpi-booked',pip.booked);
+  // ── Performance tab charts ──
+  buildLine('chart-perf-apps',cumAppsVal,ps.name,fmtMoney,null,false,T.aLineColor);
+  const el1=document.getElementById('kpi-perf-apps');if(el1)el1.textContent=fmtMoney(totApps);
+
+  buildLine('chart-perf-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor,totInf,T.avgLineColor,T.showAvgInf);
+  const el2=document.getElementById('kpi-perf-inf');if(el2)el2.textContent=fmtMoney(totInf);
+  setBeacon('beacon-perf-inf',totInf,infScaledTgt,infScaledTgt*0.75);
+
+  // ── Checks tab charts (same cumulative data) ──
+  buildLine('chart-checks-apps',cumAppsVal,ps.name,fmtMoney,null,false,T.aLineColor);
+  const el3=document.getElementById('kpi-checks-apps');if(el3)el3.textContent=fmtMoney(totApps);
+
+  buildLine('chart-checks-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor,totInf,T.avgLineColor,T.showAvgInf);
+  const el4=document.getElementById('kpi-checks-inf');if(el4)el4.textContent=fmtMoney(totInf);
 
   refreshBadges();
 }
+
 // Hide loading overlay — always remove on load regardless of errors
 window.addEventListener('load', () => document.getElementById('loading-overlay').classList.remove('active'));
 try { rebuildCharts(); } catch(e) {
   console.error('Chart build error:', e);
   document.getElementById('loading-overlay').classList.remove('active');
 }
+
 function openTargets(){
   document.getElementById('t-talk-tgt').value=T.talkTgt;
   document.getElementById('t-talk-tgt-show').checked=T.showTalkTgt;
@@ -1099,7 +1096,6 @@ function openTargets(){
   document.getElementById('t-show-avg-a').checked=T.showAvgA;
   document.getElementById('t-show-avg-inf').checked=T.showAvgInf;
   document.getElementById('inf-tgt-hint').textContent=`Team target = sum of individual targets`;
-  // Per-chart colours
   ['talk','q','a','inf'].forEach(k=>{
     document.getElementById(`t-${k}-line-color`).value=T[`${k}LineColor`];
     document.getElementById(`t-${k}-tgt-color`).value=T[`${k}TgtColor`];
@@ -1166,7 +1162,6 @@ function saveTargets(){
     aOn:fv('thr-a-on',2),aNear:fv('thr-a-near',1),
     infOn:fv('thr-inf-on',20000),infNear:fv('thr-inf-near',15000),
   };
-  // Save to server so settings persist across devices and sessions
   fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(T)});
   closeTargets();rebuildCharts();
 }
