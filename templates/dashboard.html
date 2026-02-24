@@ -538,7 +538,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 
   <div class="chart-grid">
     <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Applications $</div></div><div class="chart-card-total" id="kpi-checks-apps">—</div><div class="chart-card-sub">cumulative application commission</div><div class="chart-wrap"><canvas id="chart-checks-apps"></canvas></div></div>
-    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div></div><div class="chart-card-total" id="kpi-checks-inf">—</div><div class="chart-card-sub">cumulative inforce commission</div><div class="chart-wrap"><canvas id="chart-checks-inf"></canvas></div></div>
+    <div class="chart-card"><div class="chart-card-top"><div class="chart-card-label">Inforce $</div><span class="beacon" id="beacon-checks-inf"></span></div><div class="chart-card-total" id="kpi-checks-inf">—</div><div class="chart-card-sub">cumulative inforce commission</div><div class="chart-wrap"><canvas id="chart-checks-inf"></canvas></div></div>
   </div>
 </div><!-- /checks panel -->
 <div id="perf" class="panel">
@@ -1176,6 +1176,7 @@ function rebuildCharts(){
 
   buildLine('chart-checks-inf',cumInfVal,ps.name,fmtMoney,infScaledTgt,T.showInfTgt,T.infLineColor,T.infTgtColor);
   const el4=document.getElementById('kpi-checks-inf');if(el4)el4.textContent=fmtMoney(totInf);
+  setBeacon('beacon-checks-inf',totInf,infScaledTgt,infScaledTgt*0.75);
 
   refreshBadges();
 }
