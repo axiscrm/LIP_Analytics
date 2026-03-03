@@ -375,19 +375,41 @@ def get_hourly_series(cursor, day):
     for r in cursor.fetchall():
         calls_hour[r["user_id"]][int(r["hr"])] = int(r["cnt"] or 0)
 
+    # Daily app/inforce totals from reports_userstats (only stored at day granularity)
+    cursor.execute("""
+        SELECT user_id,
+               app_add AS apps_count, app_add_value AS apps_value,
+               app_com AS inforce_count, app_com_value AS inforce_value
+        FROM reports_userstats
+        WHERE user_id IN (181,182,183,152)
+          AND date = %s
+    """, (day_iso,))
+    daily_stats = {}
+    for r in cursor.fetchall():
+        daily_stats[r["user_id"]] = {
+            "apps_count":    int(r["apps_count"] or 0),
+            "apps_value":    float(r["apps_value"] or 0),
+            "inforce_count": int(r["inforce_count"] or 0),
+            "inforce_value": float(r["inforce_value"] or 0),
+        }
+
     # Build series per user keyed by hour strings
+    # Apps/inforce are daily totals — assign to first hour so total() stays correct
     hours_list = [str(h) for h in HOURS]
     user_hour = defaultdict(dict)
+    first_hour = str(HOURS[0])
     for uid in SHOW_USER_IDS:
+        ds = daily_stats.get(uid, {})
         for h in HOURS:
             hs = str(h)
+            is_first = (hs == first_hour)
             user_hour[uid][hs] = {
                 "talk_time_seconds": talk_hour[uid].get(h, 0),
                 "leads_quoted": quotes_hour[uid].get(h, 0),
-                "apps_count": 0,
-                "apps_value": 0,
-                "inforce_count": 0,
-                "inforce_value": 0,
+                "apps_count":    ds.get("apps_count", 0) if is_first else 0,
+                "apps_value":    ds.get("apps_value", 0) if is_first else 0,
+                "inforce_count": ds.get("inforce_count", 0) if is_first else 0,
+                "inforce_value": ds.get("inforce_value", 0) if is_first else 0,
             }
 
     calls_day_hourly = defaultdict(dict)
