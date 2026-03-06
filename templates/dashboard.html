@@ -10,7 +10,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --orange:#D34108;--orange2:#EA6921;--header:#1b1d23;
+  --orange:#D7490D;--orange2:#EA6921;--header:#1b1d23;
   --slate1:#2d3f52;--slate2:#4d6175;--slate3:#8a97a8;--slate4:#bcc4ce;
   --g25:#FCFCFD;--g50:#F9FAFB;--g100:#F2F4F7;--g200:#EAECF0;
   --g300:#D0D5DD;--g400:#98A2B3;--g500:#667085;--g600:#475467;--g700:#344054;--g900:#101828;
@@ -27,12 +27,12 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);font
 .loading-overlay{position:fixed;inset:0;background:rgba(27,29,35,.82);backdrop-filter:blur(4px);z-index:3000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
 .loading-overlay.active{opacity:1;pointer-events:all}
 .loading-card{background:#fff;border-radius:16px;padding:36px 48px;display:flex;flex-direction:column;align-items:center;gap:18px;box-shadow:var(--sh-lg)}
-.loading-spinner{width:44px;height:44px;border:3px solid rgba(211,65,8,.15);border-top-color:#D34108;border-radius:50%;animation:spin .75s linear infinite}
+.loading-spinner{width:44px;height:44px;border:3px solid rgba(215,73,13,.15);border-top-color:#D7490D;border-radius:50%;animation:spin .75s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-dots{display:flex;gap:7px}
 .loading-dots span{width:7px;height:7px;border-radius:50%;background:var(--g300);animation:dot-pulse 1.4s ease-in-out infinite}
 .loading-dots span:nth-child(2){animation-delay:.2s}.loading-dots span:nth-child(3){animation-delay:.4s}
-@keyframes dot-pulse{0%,80%,100%{background:var(--g300);transform:scale(.85)}40%{background:#D34108;transform:scale(1)}}
+@keyframes dot-pulse{0%,80%,100%{background:var(--g300);transform:scale(.85)}40%{background:#D7490D;transform:scale(1)}}
 .loading-label{font-size:14px;font-weight:600;color:var(--g700)}
 .loading-sub{font-size:12px;color:var(--g400);margin-top:-10px}
 
@@ -48,15 +48,15 @@ body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);font
 .toolbar{background:#fff;border-bottom:1px solid var(--g200);padding:10px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative}
 .toolbar-label{font-size:13px;font-weight:500;color:var(--g600);white-space:nowrap}
 .toolbar-sep{width:1px;height:20px;background:var(--g200);margin:0 4px;flex-shrink:0}
-.toolbar input[type=date],.toolbar select{height:34px;padding:0 10px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;color:var(--g700);background:#fff;outline:none;cursor:pointer;accent-color:#D34108}
-input[type=date]{accent-color:#D34108}
-.date-popover-field input{accent-color:#D34108}
+.toolbar input[type=date],.toolbar select{height:34px;padding:0 10px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;color:var(--g700);background:#fff;outline:none;cursor:pointer;accent-color:#D7490D}
+input[type=date]{accent-color:#D7490D}
+.date-popover-field input{accent-color:#D7490D}
 input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer}
 input[type=date]::-webkit-datetime-edit-day-field:focus,
 input[type=date]::-webkit-datetime-edit-month-field:focus,
-input[type=date]::-webkit-datetime-edit-year-field:focus{background:#D34108;color:#fff;border-radius:2px}
+input[type=date]::-webkit-datetime-edit-year-field:focus{background:#D7490D;color:#fff;border-radius:2px}
 .toolbar select{padding-right:26px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2398A2B3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
-.toolbar input[type=date]:focus,.toolbar select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.toolbar input[type=date]:focus,.toolbar select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(215,73,13,.12)}
 .qf-group{display:flex;align-items:center;gap:4px}
 /* Period button */
 .period-btn{gap:6px;font-variant-numeric:tabular-nums;min-width:200px;justify-content:flex-start}
@@ -67,7 +67,7 @@ input[type=date]::-webkit-datetime-edit-year-field:focus{background:#D34108;colo
 .date-popover-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .date-popover-field label{display:block;font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
 .date-popover-field input{width:100%;height:34px;padding:0 8px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;color:var(--g700);box-sizing:border-box;outline:none}
-.date-popover-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.date-popover-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(215,73,13,.12)}
 .date-popover-field input:invalid,.date-popover-field input.out-of-range{border-color:#F04438}
 .date-popover-warn{display:flex;align-items:center;gap:6px;font-size:12px;color:#B42318;background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.15);border-radius:6px;padding:7px 10px;margin-bottom:10px}
 .date-popover-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:6px;border-top:1px solid var(--g100)}
@@ -79,6 +79,8 @@ input[type=date]::-webkit-datetime-edit-year-field:focus{background:#D34108;colo
 .btn-primary{background:var(--orange);color:#fff}.btn-primary:hover{background:var(--orange2)}
 .btn-ghost{background:#fff;color:var(--g700);border:1px solid var(--g300)}.btn-ghost:hover{background:var(--g50);border-color:var(--g400)}
 .btn-ghost.active-filter{background:var(--orange);color:#fff;border-color:var(--orange)}
+.wb-mode-toggle{display:flex;align-items:center;gap:2px}
+.wb-mode-toggle select{font-size:13px;padding-right:26px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2398A2B3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
 
 /* Tabs */
 .tabs{background:#fff;border-bottom:1px solid var(--g200);padding:0 24px;display:flex}
@@ -113,6 +115,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--g200)}
 .avatar-fallback{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 .adviser-name{font-weight:600;color:var(--g900);font-size:13px}
+.inf-crown{font-size:12px;vertical-align:text-top;cursor:default;line-height:1}
 
 /* Conversion rate cells */
 .conv-cell{font-size:12px;font-weight:600;color:var(--g600)}
@@ -139,7 +142,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 /* Tooltip */
 .tip-wrap{position:relative;display:inline-flex;align-items:center;margin-left:4px}
 .info-icon{width:13px;height:13px;cursor:default;color:var(--g400);flex-shrink:0}
-.tip{display:none;position:fixed;z-index:9999;background:var(--g900);color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:6px;width:220px;white-space:normal;text-align:left;box-shadow:var(--sh-md);pointer-events:none}
+.tip{display:none;position:fixed;z-index:9999;background:var(--g900);color:#fff;font-size:11px;line-height:1.5;padding:8px 10px;border-radius:6px;width:250px;white-space:normal;text-align:left;box-shadow:var(--sh-md);pointer-events:none}
+.tip-below{}
 
 /* Beacons */
 @keyframes pulse-on  {0%,100%{box-shadow:0 0 0 0 rgba(var(--on-glow),.55)}70%{box-shadow:0 0 0 7px rgba(var(--on-glow),0)}}
@@ -181,14 +185,14 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .tgt-2col{grid-template-columns:1fr 1fr}
 .tgt-field label{font-size:12px;font-weight:600;color:var(--g700);display:block;margin-bottom:4px}
 .tgt-field input[type=number]{width:100%;height:34px;padding:0 10px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:13px;color:var(--g700);outline:none}
-.tgt-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.tgt-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(215,73,13,.12)}
 .tgt-hint{font-size:11px;color:var(--g400);margin-top:3px}
 
 /* ── Targets rows — input narrow, colours+toggle stacked below ── */
 .tgt-line-row{margin-bottom:10px;border:1px solid var(--g200);border-radius:var(--r-sm);padding:12px}
 .tgt-line-row .tgt-field{margin:0 0 6px}
 .tgt-field input[type=number]{width:88px;height:30px;padding:0 8px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:12px;color:var(--g700);outline:none}
-.tgt-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.tgt-field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(215,73,13,.12)}
 .tgt-row-bottom{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px}
 .tgt-color-group{display:flex;align-items:center;gap:6px}
 .tgt-color-label{font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
@@ -211,7 +215,7 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .thr-field-narrow{flex:0 0 auto}
 .thr-field-narrow label{display:block;font-size:10px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap}
 .thr-field-narrow input[type=number]{width:88px;height:30px;padding:0 8px;border:1px solid var(--g300);border-radius:var(--r-sm);font-family:'Inter',sans-serif;font-size:12px;color:var(--g700);outline:none}
-.thr-field-narrow input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+.thr-field-narrow input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(215,73,13,.12)}
 .thr-bottom-row{display:flex;align-items:center;gap:14px;padding-top:10px;border-top:1px solid var(--g100)}
 .thr-enabled-row{display:flex;align-items:center;gap:8px}
 /* toggle always first in bottom row */
@@ -319,7 +323,209 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
 .unassigned-field-label{font-size:11px;font-weight:600;color:var(--g400);text-transform:uppercase;letter-spacing:.04em;min-width:60px}
 .unassigned-field-value{font-size:13px;color:var(--g700)}
 
+/* Pipeline tiles */
+.pipeline-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.pipeline-tile{background:#fff;border:1px solid var(--g200);border-radius:var(--r);padding:20px;box-shadow:var(--sh-sm);cursor:pointer;transition:border-color .2s,box-shadow .2s;text-align:center;position:relative}
+.pipeline-tile:hover{border-color:rgba(211,65,8,.35);box-shadow:0 0 0 3px rgba(211,65,8,.08),0 2px 12px rgba(211,65,8,.1)}
+.pipeline-tile-label{font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.pipeline-tile-count{font-size:32px;font-weight:700;color:var(--g900);line-height:1.1;letter-spacing:-.5px}
+.pipeline-tile-beacon{position:absolute;top:12px;right:12px}
+.pipeline-tile.tile-not-contacted .pipeline-tile-count{color:#2563eb}
+.pipeline-tile.tile-contacted .pipeline-tile-count{color:#7c3aed}
+.pipeline-tile.tile-quoted .pipeline-tile-count{color:#c2410c}
+.pipeline-tile.tile-submitted .pipeline-tile-count{color:#059669}
+.pipeline-tile.tile-not-contacted{border-top:3px solid #3b82f6}
+.pipeline-tile.tile-contacted{border-top:3px solid #8b5cf6}
+.pipeline-tile.tile-quoted{border-top:3px solid #ea580c}
+.pipeline-tile.tile-submitted{border-top:3px solid #10b981}
+@media(max-width:768px){.pipeline-tiles{grid-template-columns:repeat(2,1fr);gap:10px}}
+.pipeline-tile.active{box-shadow:0 0 0 3px rgba(211,65,8,.18),0 2px 12px rgba(211,65,8,.13);border-color:rgba(211,65,8,.5)}
+.pipeline-tile.tile-not-contacted.active{box-shadow:0 0 0 3px rgba(59,130,246,.2),0 2px 12px rgba(59,130,246,.12);border-color:#3b82f6;background:#eff6ff}
+.pipeline-tile.tile-contacted.active{box-shadow:0 0 0 3px rgba(139,92,246,.2),0 2px 12px rgba(139,92,246,.12);border-color:#8b5cf6;background:#f5f3ff}
+.pipeline-tile.tile-quoted.active{box-shadow:0 0 0 3px rgba(234,88,12,.2),0 2px 12px rgba(234,88,12,.12);border-color:#ea580c;background:#fff7ed}
+.pipeline-tile.tile-submitted.active{box-shadow:0 0 0 3px rgba(16,185,129,.2),0 2px 12px rgba(16,185,129,.12);border-color:#10b981;background:#ecfdf5}
+
 /* Column group shading removed */
+
+/* ── Workbench tab ── */
+/* .wb-grid replaced by .wb-container + .wb-container-grid — see modular dashboard CSS */
+.wb-chart-widget{background:#fff;border:1px solid var(--g200);border-radius:8px;padding:18px;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+.wb-chart-widget>.div-chart-flex,.wb-chart-widget>div:last-child{flex:1;display:flex;flex-direction:column}
+.wb-chart-widget .chart-wrap{flex:1;min-height:0}
+.wb-chart-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+/* Chart toggle — equal-width segments */
+.wb-seg-toggle{display:inline-flex;background:var(--g100);border-radius:8px;padding:3px;flex-shrink:0}
+.wb-seg{width:120px;text-align:center;padding:6px 0;border:none;background:transparent;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--g500);cursor:pointer;border-radius:6px;transition:all .15s;white-space:nowrap}
+.wb-seg.active{background:#fff;color:var(--g900);font-weight:600;box-shadow:0 1px 3px rgba(16,24,40,.1),0 1px 2px rgba(16,24,40,.06)}
+/* ── Unified pipeline widget (metrics + lists) ── */
+.wb-pipeline{background:#fff;border:1px solid var(--g200);border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.06);overflow:hidden;display:flex;flex-direction:column}
+.wb-pipeline-hdr{padding:16px 20px 14px;border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between}
+.wb-pipeline-title{font-size:14px;font-weight:600;color:var(--g900)}
+.wb-pipeline-sub{font-size:12px;color:var(--g400);font-weight:400}
+/* Metric tiles row inside the card */
+.wb-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--g200)}
+.wb-metric-card{padding:10px 12px;text-align:center;cursor:pointer;transition:background .15s;user-select:none;border-right:1px solid var(--g200);position:relative}
+.wb-metric-card:last-child{border-right:none}
+.wb-metric-card:hover{background:var(--g50)}
+.wb-metric-card::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:transparent;transition:background .15s}
+.wb-metric-card:hover::after{background:var(--orange)}
+.wb-metric-card .tip-wrap{position:absolute;top:6px;right:6px;margin-left:0}
+.wb-metric-count{font-size:22px;font-weight:700;color:var(--g900);line-height:1.2;letter-spacing:-.3px}
+.wb-metric-label{font-size:11px;font-weight:500;color:var(--g500);margin-top:2px}
+/* Fresh & Stale columns side by side */
+.wb-lists-row{display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0}
+.wb-list-col{display:flex;flex-direction:column;min-height:0}
+.wb-list-col:first-child{border-right:1px solid var(--g200)}
+.wb-list-header{padding:12px 16px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.wb-list-dot-hdr{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.wb-list-dot-hdr.green{background:#12B76A}.wb-list-dot-hdr.red{background:#B42318}
+.wb-list-title{font-size:13px;font-weight:600;color:var(--g700)}
+.wb-list-hdr-right{margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.wb-list-badge{background:var(--g100);color:var(--g600);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.wb-list-body{flex:1;overflow-y:auto;padding:0;min-height:0}
+.wb-list-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--g50);text-decoration:none;color:inherit;transition:background .15s}
+.wb-list-item:last-child{border-bottom:none}
+.wb-list-item:hover{background:var(--g50)}
+.wb-list-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
+.wb-list-info{flex:1;min-width:0}
+.wb-list-name{font-size:13px;font-weight:500;color:var(--g700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wb-list-sub{font-size:11px;color:var(--g500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.wb-list-time{font-size:12px;font-weight:400;color:var(--g400);flex-shrink:0;white-space:nowrap}
+.wb-list-empty{padding:24px 16px;text-align:center;font-size:12px;color:var(--g400)}
+.wb-list-thresh{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--g400);flex-shrink:0}
+.wb-thresh{width:42px;border:1px solid var(--g300);border-radius:4px;padding:2px 4px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--g700);text-align:center;outline:none;-moz-appearance:textfield}
+.wb-thresh::-webkit-inner-spin-button,.wb-thresh::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.wb-thresh:focus{border-color:var(--orange);box-shadow:0 0 0 2px rgba(215,73,13,.12)}
+.wb-select{border:1px solid var(--g300);border-radius:4px;padding:2px 4px;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;color:var(--g700);outline:none;cursor:pointer;background:#fff;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23667085' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 4px center;padding-right:16px}
+.wb-select:focus{border-color:var(--orange);box-shadow:0 0 0 2px rgba(215,73,13,.12)}
+.wb-list-foot{padding:6px 16px;font-size:10px;font-weight:500;color:var(--g400);text-align:center;border-top:1px solid var(--g100);flex-shrink:0}
+/* Fresh / Stale header animations & gradients */
+@keyframes wb-pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(18,183,106,.5)}50%{box-shadow:0 0 0 6px rgba(18,183,106,0)}}
+@keyframes wb-pulse-red{0%,100%{box-shadow:0 0 0 0 rgba(180,35,24,.4)}50%{box-shadow:0 0 0 6px rgba(180,35,24,0)}}
+.wb-col-fresh .wb-list-dot-hdr{animation:wb-pulse-green 1.5s ease-in-out infinite}
+.wb-col-fresh .wb-list-header{background:linear-gradient(to right,rgba(18,183,106,.18),rgba(18,183,106,.02))}
+/* Stale leads — red gradient darker on right */
+.wb-col-stale .wb-list-dot-hdr{animation:wb-pulse-red 2s ease-in-out infinite}
+.wb-col-stale .wb-list-header{background:linear-gradient(to left,rgba(180,35,24,.18),rgba(180,35,24,.02))}
+/* Workbench panel filter tabs */
+.wb-filter-tabs{display:flex;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.wb-filter-tabs::-webkit-scrollbar{display:none}
+.wb-filter-tab{flex:0 0 auto;padding:10px 14px;font-size:12px;font-weight:500;color:var(--g400);text-align:center;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;font-family:'Inter',sans-serif}
+.wb-filter-tab:hover{color:var(--g600)}
+.wb-filter-tab.active{color:var(--orange);border-bottom-color:var(--orange);font-weight:600}
+.wb-filter-tab .wb-ftab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:16px;padding:0 5px;border-radius:8px;font-size:10px;font-weight:600;margin-left:4px}
+.wb-filter-tab.active .wb-ftab-count{background:rgba(215,73,13,.1);color:#b45309}
+.wb-filter-tab:not(.active) .wb-ftab-count{background:var(--g100);color:var(--g400)}
+
+/* ── Modular Dashboard: Customise mode ── */
+.wb-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.wb-customise-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--g200);background:#fff;color:var(--g500);font-size:12px;font-weight:500;padding:5px 10px;border-radius:6px;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
+.wb-customise-btn:hover{color:var(--g700);border-color:var(--g300);background:var(--g50)}
+.wb-edit-bar{display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(135deg,#FFF7ED,#FEF3C7);border:1px solid #FDBA74;border-radius:8px;margin-bottom:12px}
+.wb-edit-bar-left{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--g600)}
+.wb-edit-bar-left svg{color:var(--orange);flex-shrink:0}
+.wb-edit-bar-right{display:flex;gap:6px}
+body.wb-editing .wb-edit-bar{display:flex}
+body.wb-editing .wb-customise-btn{display:none}
+
+/* Widget container */
+.wb-container{display:flex;flex-direction:column;gap:16px;max-width:100%}
+.wb-container-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:100%}
+
+/* Widget wrappers */
+.wb-widget{position:relative;transition:opacity .2s;max-width:100%;box-sizing:border-box}
+.wb-widget.wb-half{display:flex;flex-direction:column}
+.wb-widget.wb-half .wb-widget-content{flex:1;display:flex;flex-direction:column}
+.wb-widget.wb-half .wb-widget-content>.wb-chart-widget,
+.wb-widget.wb-half .wb-widget-content>.wb-pipeline,
+.wb-widget.wb-half .wb-widget-content>.wb-lead-table-widget{flex:1;display:flex;flex-direction:column}
+.wb-widget.wb-hidden{display:none!important}
+.wb-widget-edit-bar{display:none}
+.wb-widget-content{/* pass-through */}
+
+/* Edit mode: show overlays */
+body.wb-editing .wb-widget:not(.wb-hidden){border:2px dashed var(--g300);border-radius:10px;padding-top:0}
+body.wb-editing .wb-widget-edit-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--g50);border-bottom:1px solid var(--g200);border-radius:8px 8px 0 0;cursor:grab}
+body.wb-editing .wb-widget.dragging{opacity:.35;border-color:var(--orange)}
+body.wb-editing .wb-widget.dragging .wb-widget-content{pointer-events:none}
+
+.wb-widget-drag-handle{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--g600)}
+.wb-widget-drag-handle svg{color:var(--g400)}
+.wb-widget-remove{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--g200);background:#fff;border-radius:6px;cursor:pointer;color:var(--g400);transition:all .15s}
+.wb-widget-remove:hover{background:#FEF2F2;border-color:#FCA5A5;color:#DC2626}
+
+/* Add-widget placeholder */
+.wb-add-placeholder{display:none;border:2px dashed var(--g200);border-radius:10px;min-height:120px;align-items:center;justify-content:center;flex-direction:column;gap:8px;cursor:pointer;transition:all .15s;background:var(--g50);color:var(--g400)}
+body.wb-editing .wb-add-placeholder{display:flex}
+.wb-add-placeholder:hover{border-color:var(--orange);background:#FFF7ED;color:var(--orange)}
+.wb-add-placeholder svg{opacity:.5}
+.wb-add-placeholder span{font-size:13px;font-weight:500}
+
+/* Drop indicator */
+.wb-drop-indicator{height:4px;background:var(--orange);border-radius:2px;margin:-2px 0;transition:opacity .15s;opacity:0}
+.wb-drop-indicator.active{opacity:1}
+
+/* Widget Picker Modal */
+.wb-picker-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.wb-picker-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--g200);border-radius:8px;cursor:pointer;transition:all .15s;background:#fff}
+.wb-picker-card:hover{border-color:var(--orange);background:#FFF7ED;box-shadow:0 2px 8px rgba(215,73,13,.1)}
+.wb-picker-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wb-picker-icon.tbl{background:#EFF6FF;color:#3B82F6}
+.wb-picker-icon.chart{background:#F0FDF4;color:#22C55E}
+.wb-picker-icon.pipe{background:#FFF7ED;color:#F97316}
+.wb-picker-icon.ltbl{background:#F5F3FF;color:#7C3AED}
+.wb-picker-info{flex:1;min-width:0}
+.wb-picker-info h4{font-size:13px;font-weight:600;color:var(--g900);margin:0}
+.wb-picker-info p{font-size:12px;color:var(--g500);margin:3px 0 0}
+.wb-picker-add{font-size:12px;font-weight:600;color:var(--orange);flex-shrink:0}
+.wb-picker-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 0;text-align:center}
+.wb-picker-empty p{font-size:13px;color:var(--g400);margin:0}
+
+/* ── Lead Table widget ── */
+.wb-lead-table-widget{background:#fff;border:1px solid var(--g200);border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.06);overflow:hidden;display:flex;flex-direction:column}
+.wb-lt-header{padding:16px 20px 12px;border-bottom:1px solid var(--g200)}
+.wb-lt-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.wb-lt-title{font-size:14px;font-weight:600;color:var(--g900)}
+.wb-lt-sub{font-size:12px;color:var(--g400);font-weight:400;margin-top:1px}
+.wb-lt-filters{display:flex;gap:6px;flex-wrap:wrap}
+.wb-lt-search{flex:1;min-width:160px;border:1px solid var(--g300);border-radius:6px;padding:6px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--g700);outline:none;transition:border-color .15s}
+.wb-lt-search:focus{border-color:var(--orange);box-shadow:0 0 0 2px rgba(215,73,13,.12)}
+.wb-lt-search::placeholder{color:var(--g400)}
+.wb-lt-filter{border:1px solid var(--g300);border-radius:6px;padding:6px 8px;font-family:'Inter',sans-serif;font-size:12px;color:var(--g700);background:#fff;cursor:pointer;outline:none}
+.wb-lt-filter:focus{border-color:var(--orange);box-shadow:0 0 0 2px rgba(215,73,13,.12)}
+.wb-lt-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1}
+.wb-lt-table{width:100%;border-collapse:collapse;font-size:13px;min-width:900px}
+.wb-lt-table thead th{position:sticky;top:0;background:#FAFAFA;padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--g500);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--g200);white-space:nowrap}
+.wb-lt-table tbody td{padding:10px 12px;border-bottom:1px solid var(--g50);color:var(--g700);white-space:nowrap;text-align:left;vertical-align:middle}
+.wb-lt-table tbody tr:hover{background:var(--g50)}
+.wb-lt-table tbody tr:last-child td{border-bottom:none}
+.wb-lt-lead-name{font-weight:500;color:var(--g900);max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.wb-lt-lead-id{font-size:11px;color:var(--g400);margin-top:1px}
+.wb-lt-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
+.wb-lt-badge.s0{background:#FEF3F2;color:#B42318}
+.wb-lt-badge.s1{background:#FFF6ED;color:#B54708}
+.wb-lt-badge.s3{background:#FFFAEB;color:#B54708}
+.wb-lt-badge.s4{background:#EFF8FF;color:#175CD3}
+.wb-lt-badge.s5{background:#ECFDF3;color:#067647}
+.wb-lt-badge.s6{background:#F2F4F7;color:var(--g500)}
+.wb-lt-adviser-cell{display:flex;align-items:center;gap:6px}
+.wb-lt-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;color:#fff;flex-shrink:0}
+.wb-lt-avatar-img{width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.wb-lt-table tbody tr{cursor:pointer;transition:background .1s}
+.wb-lt-table tbody tr:hover{background:#FFF7ED}
+.wb-lt-table tbody tr:active{background:#FFEDD5}
+.wb-lt-open-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
+.wb-lt-open-badge.open{background:#ECFDF3;color:#067647}
+.wb-lt-open-badge.closed{background:#F2F4F7;color:var(--g500)}
+.wb-lt-footer{padding:8px 16px;text-align:center;border-top:1px solid var(--g100)}
+.wb-lt-load-more{background:none;border:1px solid var(--g200);border-radius:6px;padding:6px 20px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--g600);cursor:pointer;transition:all .15s}
+.wb-lt-load-more:hover{border-color:var(--orange);color:var(--orange);background:#FFF7ED}
+.wb-lt-empty{padding:30px 16px;text-align:center;font-size:12px;color:var(--g400)}
+
+/* ── Responsive: Workbench stacking ── */
+@media(max-width:1024px){
+  .wb-container-grid{grid-template-columns:1fr}
+}
 @media(max-width:768px){
   /* Header */
   .topbar{padding:0 14px;gap:10px;height:52px}
@@ -366,6 +572,78 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   .remed-panel{width:100vw}
   .remed-toolbar{padding:10px 14px 0}
   .remed-filter{min-width:100px}
+  /* Workbench — layout container */
+  .wb-container{width:calc(100vw - 28px);box-sizing:border-box;gap:12px}
+  .wb-container-grid{grid-template-columns:1fr;width:100%;gap:12px}
+
+  /* Workbench — topbar (legend + customise) */
+  .wb-topbar{flex-direction:column;align-items:stretch;gap:6px}
+  .wb-customise-btn{align-self:flex-end}
+
+  /* Workbench — edit bar */
+  .wb-edit-bar{flex-direction:column;gap:8px;padding:8px 12px}
+  .wb-edit-bar-left{font-size:11px}
+  .wb-edit-bar-left span{line-height:1.4}
+  .wb-edit-bar-right{align-self:flex-end}
+
+  /* Workbench — widget wrappers */
+  .wb-widget{width:100%;box-sizing:border-box;min-width:0;overflow:hidden}
+  body.wb-editing .wb-widget-edit-bar{padding:6px 10px}
+  .wb-widget-drag-handle span{font-size:11px}
+
+  /* Workbench — table widget */
+  .wb-widget .table-outer{width:100%;box-sizing:border-box;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* Workbench — chart widget */
+  .wb-chart-widget{width:100%;box-sizing:border-box;min-width:0;padding:12px}
+  .wb-chart-top-row{flex-direction:column;gap:8px}
+  .wb-seg-toggle{width:100%}
+  .wb-seg{width:auto;flex:1;font-size:11px;padding:6px 4px}
+
+  /* Workbench — pipeline widget */
+  .wb-pipeline{width:100%;box-sizing:border-box;min-width:0}
+  .wb-pipeline-hdr{padding:12px 14px 10px}
+  .wb-pipeline-title{font-size:13px}
+  .wb-metrics{grid-template-columns:repeat(2,1fr)}
+  .wb-metric-card{padding:8px 6px}
+  .wb-metric-count{font-size:18px}
+  .wb-metric-label{font-size:10px}
+  .wb-lists-row{grid-template-columns:1fr}
+  .wb-list-col:first-child{border-right:none;border-bottom:1px solid var(--g200)}
+  .wb-list-header{flex-wrap:wrap;gap:6px;padding:10px 12px 8px}
+  .wb-list-hdr-right{flex-wrap:wrap;gap:4px}
+  .wb-list-item{padding:8px 12px;gap:8px}
+  .wb-list-avatar{width:28px;height:28px;font-size:10px}
+  .wb-list-name{font-size:12px}
+  .wb-list-sub{font-size:10px}
+  .wb-list-time{font-size:11px}
+  .wb-filter-tabs{padding:0 10px}
+
+  /* Workbench — lead table widget */
+  .wb-lead-table-widget{width:100%;box-sizing:border-box;min-width:0}
+  .wb-lt-header{padding:12px 14px 10px}
+  .wb-lt-filters{flex-direction:column;gap:6px}
+  .wb-lt-search{min-width:0;width:100%}
+  .wb-lt-filter{width:100%}
+  .wb-lt-table-wrap{width:100%}
+  .wb-lt-table thead th{padding:6px 8px;font-size:10px}
+  .wb-lt-table tbody td{padding:8px;font-size:12px}
+  .wb-lt-lead-name{max-width:120px}
+
+  /* Workbench — add placeholder */
+  .wb-add-placeholder{min-height:80px}
+  .wb-add-placeholder svg{width:24px;height:24px}
+  .wb-add-placeholder span{font-size:12px}
+
+  /* Workbench — picker modal */
+  .wb-picker-card{padding:10px 12px;gap:10px}
+  .wb-picker-icon{width:34px;height:34px}
+  .wb-picker-info h4{font-size:12px}
+  .wb-picker-info p{font-size:11px}
+
+  /* Mode toggle — full width row below adviser */
+  .wb-mode-toggle{flex-basis:100%;order:11;display:flex;align-items:center;gap:4px}
+  .wb-mode-toggle select{flex:1;height:38px;font-size:14px}
 }
 </style>
 </head>
@@ -493,11 +771,20 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
       <div class="ms-actions"><button type="button" class="btn btn-primary btn-sm" onclick="msApply()">Apply</button></div>
     </div>
   </div>
+  <div class="toolbar-sep"></div>
+  <div class="wb-mode-toggle">
+    <select class="btn btn-ghost" name="mode" id="wb-mode-select" onchange="document.getElementById('filter-form').submit()">
+      <option value="funnel" {% if wb_mode=='funnel' %}selected{% endif %}>Funnel Progression</option>
+      <option value="activity" {% if wb_mode=='activity' %}selected{% endif %}>Total Activity</option>
+    </select>
+    <div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip tip-below"><b>Funnel Progression</b> — Only leads assigned within the selected date range. Shows how those leads converted through each stage.<br><br><b>Total Activity</b> — All leads an adviser worked on during the date range, including leads assigned before this period. Shows overall workload and productivity.</div></div>
+  </div>
 </form>
 
 <div class="tabs">
-  <div class="tab" id="tab-perf"   onclick="showTab('perf',this)">Performance</div>
-  <div class="tab" id="tab-checks" onclick="showTab('checks',this)">Checks</div>
+  <div class="tab" id="tab-perf"      onclick="showTab('perf',this)">Performance</div>
+  <div class="tab" id="tab-checks"    onclick="showTab('checks',this)">Checks</div>
+  <div class="tab" id="tab-workbench" onclick="showTab('workbench',this)">Workbench</div>
 </div>
 
 <div class="content">
@@ -513,8 +800,8 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         <th style="min-width:180px" rowspan="2"><div class="th-inner">Adviser</div></th>
         {% macro cth(label,tip) %}<th rowspan="2"><div class="th-inner">{{ label }}<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">{{ tip }}</div></div></div></th>{% endmacro %}
         {{ cth("Assigned","Total leads assigned to this adviser in the period.") }}
-        {{ cth("Contacted","Calls with a duration of 45 seconds or more.") }}
-        {{ cth("Not Contacted","Calls with a duration of less than 45 seconds.") }}
+        {{ cth("Contacted","Leads with at least one 45s+ call from this adviser.") }}
+        {{ cth("Not Contacted","Leads with no 45s+ call from this adviser.") }}
         {{ cth("Booked","Of assigned leads: received the Life Insurance Questions document.") }}
         {{ cth("Quotes #","Distinct leads quoted in the selected period.") }}
         {{ cth("Apps #","Applications created in the selected period.") }}
@@ -525,12 +812,16 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
         {{ cth("A→C %","Contacted ÷ Assigned × 100. Lead contact rate.") }}
         {{ cth("C→B %","Booked ÷ Contacted × 100. Contact-to-book conversion.") }}
         {{ cth("A→B %","Booked ÷ Assigned × 100. Overall conversion rate.") }}
-        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Today's Appts</div></th>
-        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div style="display:flex;justify-content:center">Future Appts</div></th>
+        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div class="tip-wrap" style="display:flex;justify-content:center">Today's Appts<svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Scheduled appointments for today. Disc = Discussion, F/U = Follow-up, Q = Questions.</div></div></th>
+        <th colspan="3" style="text-align:center;border-bottom:1px solid var(--g200)"><div class="tip-wrap" style="display:flex;justify-content:center">Future Appts<svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Scheduled appointments after today. Disc = Discussion, F/U = Follow-up, Q = Questions.</div></div></th>
       </tr>
       <tr>
-        <th><div class="th-inner">Disc</div></th><th><div class="th-inner">F/U</div></th><th><div class="th-inner">Q</div></th>
-        <th><div class="th-inner">Disc</div></th><th><div class="th-inner">F/U</div></th><th><div class="th-inner">Q</div></th>
+        <th><div class="th-inner">Disc<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Discussion — initial call to discuss the client's needs.</div></div></div></th>
+        <th><div class="th-inner">F/U<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Follow-up — subsequent call to follow up on a previous discussion.</div></div></div></th>
+        <th><div class="th-inner">Q<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Questions — call to go through the Life Insurance Questions document.</div></div></div></th>
+        <th><div class="th-inner">Disc<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Discussion — initial call to discuss the client's needs.</div></div></div></th>
+        <th><div class="th-inner">F/U<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Follow-up — subsequent call to follow up on a previous discussion.</div></div></div></th>
+        <th><div class="th-inner">Q<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Questions — call to go through the Life Insurance Questions document.</div></div></div></th>
       </tr>
     </thead>
     <tbody id="checks-tbody">
@@ -677,7 +968,363 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   </div>
 </div>
 
+<!-- ══ WORKBENCH ══ -->
+<div id="workbench" class="panel">
+  <div class="wb-topbar">
+    <div class="legend">
+      <span class="legend-item"><span class="beacon beacon-on"></span>On target</span>
+      <span class="legend-item"><span class="beacon beacon-near"></span>Near target</span>
+      <span class="legend-item"><span class="beacon beacon-below"></span>Below target</span>
+    </div>
+    <button class="wb-customise-btn" id="wb-customise-btn" onclick="wbEnterEdit()" title="Customise dashboard">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span>Customise</span>
+    </button>
+  </div>
+
+  <!-- Edit bar — visible only in edit mode -->
+  <div class="wb-edit-bar" id="wb-edit-bar">
+    <div class="wb-edit-bar-left">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span>Editing dashboard — drag to reorder, click <b>×</b> to remove</span>
+    </div>
+    <div class="wb-edit-bar-right">
+      <button class="btn btn-ghost" onclick="wbResetLayout()">Reset</button>
+      <button class="btn btn-primary" onclick="wbExitEdit()">Done</button>
+    </div>
+  </div>
+
+  <div class="wb-container" id="wb-container">
+
+  <!-- WIDGET: Performance Table -->
+  <div class="wb-widget" data-widget-id="wb-table" id="wb-w-table">
+    <div class="wb-widget-edit-bar">
+      <div class="wb-widget-drag-handle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+        <span>Performance Table</span>
+      </div>
+      <button class="wb-widget-remove" onclick="wbRemoveWidget('wb-table')" title="Remove widget">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="wb-widget-content">
+  <div class="table-outer"><div class="table-scroll"><table>
+    <thead>
+      <tr>
+      <th style="min-width:180px"><div class="th-inner">Adviser</div></th>
+      <th><div class="th-inner">Days<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Business days where adviser made at least 1 call or sent at least 1 quote.</div></div></div></th>
+      {{ th2("Remed","Total remediations in period. Click to view details.") }}
+      {{ th2("Assigned","Total leads assigned to this adviser in the period.") }}
+      {{ th2("Talk Time","Total call duration via noojee_callrecord.","b") }}
+      {{ th2("Talk / Day","Total talk time ÷ days worked. Threshold-highlighted.","b") }}
+      {{ th2("Quotes #","Distinct leads quoted (last quote per lead).","c") }}
+      {{ th2("Quote Total $","Sum of last quote value per lead in period.","c") }}
+      {{ th2("Quote Avg $","Quote Total ÷ Quotes count.","c") }}
+      {{ th2("Quotes / Day","Quotes ÷ days worked. Threshold-highlighted.","c") }}
+      {{ th2("Apps #","Applications created in period.","d") }}
+      {{ th2("Apps $","SUM OF APPLICATION COMMISSION IN PERIOD","d") }}
+      {{ th2("APPS AVG $","Application commission ÷ number of applications.","d") }}
+      {{ th2("Apps / Day","Apps ÷ days worked. Threshold-highlighted.","d") }}
+      {{ th2("Q-App %","Apps ÷ Quotes × 100.","d") }}
+      {{ th2("Inforce #","Apps completed in period.","d") }}
+      {{ th2("Inforce $","Cumulative commission for completed (inforce) apps. Threshold-highlighted.","d") }}
+      </tr>
+    </thead>
+    <tbody id="wb-perf-tbody">
+      {% for r in perf_rows %}
+      <tr class="adviser-row" data-uid="{{ r.user_id }}"
+          data-days="{{ r.days_worked }}" data-assigned="{{ r.assigned }}"
+          data-talk-s="{{ r.talk_time_s }}" data-talk-pd-s="{{ r.talk_per_day_s }}"
+          data-talk-mins="{{ (r.talk_per_day.split(':')[0]|int*60+r.talk_per_day.split(':')[1]|int) if ':' in r.talk_per_day else 0 }}"
+          data-quotes="{{ r.quotes_count }}" data-quote-val="{{ r.quote_total }}"
+          data-qpd="{{ r.quotes_per_day }}"
+          data-apps="{{ r.apps_count }}" data-apps-val="{{ r.apps_value }}"
+          data-apd="{{ r.apps_per_day }}"
+          data-inf-count="{{ r.inforce_count }}" data-inf="{{ r.inforce_value }}"
+          data-remed-total="{{ r.remed_total }}">
+        <td><div class="avatar-cell">
+          {% if r.avatar_url %}<img class="avatar" src="{{ r.avatar_url }}" alt="{{ r.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="avatar-fallback" style="display:none;background:{{ r.avatar_color }}">{{ r.initials }}</div>
+          {% else %}<div class="avatar-fallback" style="background:{{ r.avatar_color }}">{{ r.initials }}</div>{% endif %}
+          <span class="adviser-name">{{ r.name }}</span>
+        </div></td>
+        <td>{{ r.days_worked }}</td>
+        <td>{% if r.remed_total > 0 %}<a href="#" class="remed-pending-link" data-uid="{{ r.user_id }}" style="color:var(--orange);font-weight:600;text-decoration:underline;cursor:pointer">{{ r.remed_total }}</a>{% else %}0{% endif %}</td>
+        <td>{% if r.assigned > 0 %}<a href="#" class="assigned-link" data-uid="{{ r.user_id }}">{{ r.assigned }}</a>{% else %}0{% endif %}</td>
+        <td data-cg="b">{{ r.talk_time }}</td>
+        <td data-cg="b"><span class="badge badge-{{ r.talk_color }}" data-badge="talk">{{ r.talk_per_day }}</span></td>
+        <td data-cg="c">{{ r.quotes_count }}</td>
+        <td data-cg="c">${{ "{:,.0f}".format(r.quote_total) }}</td>
+        <td data-cg="c">${{ "{:,.0f}".format(r.quote_avg) }}</td>
+        <td data-cg="c"><span class="badge badge-{{ r.quotes_color }}" data-badge="qpd">{{ r.quotes_per_day }}</span></td>
+        <td data-cg="d">{{ r.apps_count }}</td>
+        <td data-cg="d">${{ "{:,.0f}".format(r.apps_value) }}</td>
+        <td data-cg="d">${{ "{:,.0f}".format(r.apps_avg) }}</td>
+        <td data-cg="d"><span class="badge badge-{{ r.apps_color }}" data-badge="apd">{{ r.apps_per_day }}</span></td>
+        <td data-cg="d">{{ r.q2a_pct }}%</td>
+        <td data-cg="d">{{ r.inforce_count }}</td>
+        <td data-cg="d"><span class="badge badge-{{ r.inforce_color }}" data-badge="inf">${{ "{:,.0f}".format(r.inforce_value) }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot id="wb-team-total-row"
+      data-talk-mins="{% if t.n %}{{ ((t.talk_s/t.n)//60)|int }}{% else %}0{% endif %}"
+      data-qpd="{{ '{:.1f}'.format(t.qpd/t.n if t.n else 0) }}"
+      data-apd="{{ '{:.1f}'.format(t.apd/t.n if t.n else 0) }}"
+      data-inf="{{ t.ival }}"><tr>
+      <td>Team Total</td><td>{{ t.days }}</td>
+      <td>{{ t.rt }}</td>
+      <td>{{ t.asgn }}</td>
+      <td data-cg="b">{% if t.talk_total_s %}{{ "%d:%02d:%02d"|format((t.talk_total_s//3600)|int,((t.talk_total_s%3600)//60)|int,(t.talk_total_s%60)|int) }}{% else %}—{% endif %}</td>
+      <td data-cg="b">{% if t.n %}{% set avg_talk_s = t.talk_s / t.n %}{{ "%d:%02d"|format((avg_talk_s//3600)|int, ((avg_talk_s%3600)//60)|int) }}{% else %}—{% endif %}</td>
+      <td data-cg="c">{{ t.q }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval) }}</td><td data-cg="c">${{ "{:,.0f}".format(t.qval/t.q if t.q else 0) }}</td><td data-cg="c">{{ "{:.1f}".format(t.qpd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ t.apps }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval) }}</td><td data-cg="d">${{ "{:,.0f}".format(t.aval/t.apps if t.apps else 0) }}</td><td data-cg="d">{{ "{:.1f}".format(t.apd / t.n if t.n else 0) }}</td>
+      <td data-cg="d">{{ "{:.1f}".format(t.apps/t.q*100 if t.q else 0) }}%</td>
+      <td data-cg="d">{{ t.inf }}</td><td data-cg="d">${{ "{:,.0f}".format(t.ival) }}</td>
+    </tr></tfoot>
+  </table></div></div>
+    </div><!-- /wb-widget-content -->
+  </div><!-- /wb-w-table -->
+
+  <!-- WIDGET: Chart -->
+  <div class="wb-widget wb-half" data-widget-id="wb-chart" id="wb-w-chart">
+    <div class="wb-widget-edit-bar">
+      <div class="wb-widget-drag-handle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+        <span>Chart</span>
+      </div>
+      <button class="wb-widget-remove" onclick="wbRemoveWidget('wb-chart')" title="Remove widget">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="wb-widget-content">
+    <div class="wb-chart-widget">
+      <div class="wb-chart-top-row">
+        <div>
+          <div class="chart-card-label" id="wb-chart-label">APPLICATIONS $</div>
+          <div class="chart-card-total" id="wb-chart-total">—</div>
+          <div class="chart-card-sub" id="wb-chart-sub">cumulative application commission</div>
+        </div>
+        <div class="wb-seg-toggle">
+          <button class="wb-seg active" id="wb-toggle-apps" onclick="wbSwitchChart('apps')">Applications $</button>
+          <button class="wb-seg" id="wb-toggle-inf" onclick="wbSwitchChart('inforce')">Inforce $</button>
+        </div>
+      </div>
+      <div style="padding:0">
+        <div class="chart-wrap"><canvas id="wb-chart-canvas"></canvas></div>
+      </div>
+    </div>
+    </div><!-- /wb-widget-content -->
+  </div><!-- /wb-w-chart -->
+
+  <!-- WIDGET: Lead Pipeline -->
+  <div class="wb-widget wb-half" data-widget-id="wb-pipeline" id="wb-w-pipeline">
+    <div class="wb-widget-edit-bar">
+      <div class="wb-widget-drag-handle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+        <span>Lead Pipeline</span>
+      </div>
+      <button class="wb-widget-remove" onclick="wbRemoveWidget('wb-pipeline')" title="Remove widget">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="wb-widget-content">
+    <div class="wb-pipeline">
+      <div class="wb-pipeline-hdr">
+        <div><div class="wb-pipeline-title">Lead Pipeline</div><div class="wb-pipeline-sub">Assigned lead breakdown</div></div>
+      </div>
+      <!-- Metric tiles row -->
+      <div class="wb-metrics">
+        <div class="wb-metric-card" onclick="openWbPanel('not_contacted')">
+          <div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Leads not yet contacted. In <b>Funnel Progression</b> mode, only leads assigned within the date range are counted. In <b>Total Activity</b> mode, any lead the adviser worked on during the period is included.</div></div>
+          <div class="wb-metric-count" id="wb-count-not-contacted">0</div>
+          <div class="wb-metric-label">Not Contacted</div>
+        </div>
+        <div class="wb-metric-card" onclick="openWbPanel('contacted')">
+          <div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Leads contacted at least once. In <b>Funnel Progression</b> mode, only leads assigned within the date range are counted. In <b>Total Activity</b> mode, any lead the adviser worked on during the period is included.</div></div>
+          <div class="wb-metric-count" id="wb-count-contacted">0</div>
+          <div class="wb-metric-label">Contacted</div>
+        </div>
+        <div class="wb-metric-card" onclick="openWbPanel('quoted')">
+          <div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Leads that received a quote. In <b>Funnel Progression</b> mode, only leads assigned within the date range are counted. In <b>Total Activity</b> mode, any lead the adviser worked on during the period is included.</div></div>
+          <div class="wb-metric-count" id="wb-count-quoted">0</div>
+          <div class="wb-metric-label">Quoted</div>
+        </div>
+        <div class="wb-metric-card" onclick="openWbPanel('submitted')">
+          <div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Leads with a submitted application. In <b>Funnel Progression</b> mode, only leads assigned within the date range are counted. In <b>Total Activity</b> mode, any lead the adviser worked on during the period is included.</div></div>
+          <div class="wb-metric-count" id="wb-count-submitted">0</div>
+          <div class="wb-metric-label">Submitted</div>
+        </div>
+      </div>
+      <!-- Fresh & Stale columns -->
+      <div class="wb-lists-row">
+        <div class="wb-list-col wb-col-fresh" id="wb-widget-new">
+          <div class="wb-list-header">
+            <div class="wb-list-title">Fresh<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Leads assigned within the time threshold you set here (e.g. 20 min). The lead pool is set by the toolbar — <b>Funnel Progression</b> uses leads assigned in the date range, <b>Total Activity</b> includes all leads worked on. Fresh then filters to those assigned most recently. Action these quickly.</div></div></div>
+            <div class="wb-list-hdr-right">
+              <div class="wb-list-thresh"><input type="number" class="wb-thresh" id="wb-new-val" value="20" min="1" max="9999" onchange="computeWbMetrics()"><select class="wb-select" id="wb-new-unit" onchange="computeWbMetrics()"><option value="min">min</option><option value="hrs">hrs</option><option value="days">days</option></select></div>
+              <select class="wb-select" id="wb-new-open" onchange="computeWbMetrics()"><option value="all">All</option><option value="open" selected>Open</option><option value="closed">Not Open</option></select>
+              <select class="wb-select" id="wb-new-stage" onchange="computeWbMetrics()"><option value="all">All stages</option><option value="0">Not Contacted</option><option value="1">Contacted</option><option value="3">Quoted</option><option value="4">Submitted</option></select>
+              <div class="wb-list-badge" id="wb-new-badge">0</div>
+            </div>
+          </div>
+          <div class="wb-list-body" id="wb-new-body">
+            <div class="wb-list-empty">No fresh leads in this period</div>
+          </div>
+          <div class="wb-list-foot">Top 3 shown</div>
+        </div>
+        <div class="wb-list-col wb-col-stale" id="wb-widget-neglected">
+          <div class="wb-list-header">
+            <div class="wb-list-title">Stale<div class="tip-wrap"><svg class="info-icon" onmouseenter="posTip(this)" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 7.33v3.34M8 5.33h.007" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tip">Leads that have exceeded the time threshold you set here (e.g. 48 hrs) without progressing. The lead pool is set by the toolbar — <b>Funnel Progression</b> uses leads assigned in the date range, <b>Total Activity</b> includes all leads worked on. Stale surfaces the oldest. These need urgent attention.</div></div></div>
+            <div class="wb-list-hdr-right">
+              <div class="wb-list-thresh"><input type="number" class="wb-thresh" id="wb-neglected-val" value="48" min="1" max="9999" onchange="computeWbMetrics()"><select class="wb-select" id="wb-neglected-unit" onchange="computeWbMetrics()"><option value="min">min</option><option value="hrs" selected>hrs</option><option value="days">days</option></select></div>
+              <select class="wb-select" id="wb-stale-open" onchange="computeWbMetrics()"><option value="all">All</option><option value="open" selected>Open</option><option value="closed">Not Open</option></select>
+              <select class="wb-select" id="wb-stale-stage" onchange="computeWbMetrics()"><option value="all">All stages</option><option value="0">Not Contacted</option><option value="1">Contacted</option><option value="3">Quoted</option><option value="4">Submitted</option></select>
+              <div class="wb-list-badge" id="wb-neglected-badge">0</div>
+            </div>
+          </div>
+          <div class="wb-list-body" id="wb-neglected-body">
+            <div class="wb-list-empty">No stale leads</div>
+          </div>
+          <div class="wb-list-foot">Top 3 shown</div>
+        </div>
+      </div>
+    </div>
+    </div><!-- /wb-widget-content -->
+  </div><!-- /wb-w-pipeline -->
+
+  <!-- WIDGET: Lead Pipeline Full-Width (simplified to 4 tiles) -->
+  <div class="wb-widget wb-hidden" data-widget-id="wb-pipeline2" id="wb-w-pipeline2">
+    <div class="wb-widget-edit-bar">
+      <div class="wb-widget-drag-handle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+        <span>Lead Pipeline (Full)</span>
+      </div>
+      <button class="wb-widget-remove" onclick="wbRemoveWidget('wb-pipeline2')" title="Remove widget">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="wb-widget-content">
+      <div class="pipeline-tiles" id="pipeline-tiles">
+        <div class="pipeline-tile tile-not-contacted" onclick="filterLeadTable('not_contacted')">
+          <div class="pipeline-tile-label">Not Contacted</div>
+          <div class="pipeline-tile-count" id="tile-not-contacted">0</div>
+        </div>
+        <div class="pipeline-tile tile-contacted" onclick="filterLeadTable('contacted')">
+          <div class="pipeline-tile-label">Contacted</div>
+          <div class="pipeline-tile-count" id="tile-contacted">0</div>
+        </div>
+        <div class="pipeline-tile tile-quoted" onclick="filterLeadTable('quoted')">
+          <div class="pipeline-tile-label">Quoted</div>
+          <div class="pipeline-tile-count" id="tile-quoted">0</div>
+        </div>
+        <div class="pipeline-tile tile-submitted" onclick="filterLeadTable('submitted')">
+          <div class="pipeline-tile-label">Submitted</div>
+          <div class="pipeline-tile-count" id="tile-submitted">0</div>
+        </div>
+      </div>
+    </div><!-- /wb-widget-content -->
+  </div><!-- /wb-w-pipeline2 -->
+
+  <!-- WIDGET: Lead Table (all referrals) -->
+  <div class="wb-widget" data-widget-id="wb-lead-table" id="wb-w-lead-table">
+    <div class="wb-widget-edit-bar">
+      <div class="wb-widget-drag-handle">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+        <span>Lead Table</span>
+      </div>
+      <button class="wb-widget-remove" onclick="wbRemoveWidget('wb-lead-table')" title="Remove widget">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="wb-widget-content">
+    <div class="wb-lead-table-widget">
+      <div class="wb-lt-header">
+        <div class="wb-lt-title-row">
+          <div><div class="wb-lt-title">All Referrals</div><div class="wb-lt-sub" id="wb-lt-count">0 leads</div></div>
+        </div>
+        <div class="wb-lt-filters">
+          <input type="text" class="wb-lt-search" id="wb-lt-search" placeholder="Search name, source, referrer…" oninput="wbLtRender()">
+          <select class="wb-lt-filter" id="wb-lt-open" onchange="wbLtRender()">
+            <option value="all">All</option>
+            <option value="open">Open</option>
+            <option value="closed">Not Open</option>
+          </select>
+          <select class="wb-lt-filter" id="wb-lt-status" onchange="wbLtRender()">
+            <option value="all">All Stages</option>
+            <option value="0">Not Contacted</option>
+            <option value="1">Contacted</option>
+            <option value="3">Quoted</option>
+            <option value="4">Submitted</option>
+          </select>
+          <select class="wb-lt-filter" id="wb-lt-source" onchange="wbLtRender()">
+            <option value="all">All Referral Partners</option>
+          </select>
+          <select class="wb-lt-filter" id="wb-lt-referrer" onchange="wbLtRender()">
+            <option value="all">All Referrers</option>
+          </select>
+          <select class="wb-lt-filter" id="wb-lt-adviser" onchange="wbLtRender()">
+            <option value="all">All Advisers</option>
+          </select>
+          <select class="wb-lt-filter" id="wb-lt-sort" onchange="wbLtRender()">
+            <option value="newest">Newest Assigned</option>
+            <option value="oldest">Oldest Assigned</option>
+            <option value="created-new">Newest Created</option>
+            <option value="created-old">Oldest Created</option>
+            <option value="name">Name A-Z</option>
+            <option value="status">Stage</option>
+          </select>
+        </div>
+      </div>
+      <div class="wb-lt-table-wrap">
+        <table class="wb-lt-table">
+          <thead>
+            <tr>
+              <th>Created</th>
+              <th>Lead</th>
+              <th>Open</th>
+              <th>Stage</th>
+              <th>Calls</th>
+              <th>Referral Partner</th>
+              <th>Referrer</th>
+              <th>Assigned To</th>
+              <th>Assigned</th>
+              <th>Time Since Assigned</th>
+            </tr>
+          </thead>
+          <tbody id="wb-lt-tbody"></tbody>
+        </table>
+      </div>
+      <div class="wb-lt-footer" id="wb-lt-footer">
+        <button class="wb-lt-load-more" id="wb-lt-load-more" onclick="wbLtShowMore()" style="display:none">Show more</button>
+      </div>
+    </div>
+    </div><!-- /wb-widget-content -->
+  </div><!-- /wb-w-lead-table -->
+
+  </div><!-- /wb-container -->
+</div><!-- /workbench panel -->
+
 </div><!-- /content -->
+
+<!-- ══ WIDGET PICKER MODAL ══ -->
+<div class="modal-overlay" id="wb-picker-modal" onclick="wbClosePickerOutside(event)">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3 style="font-size:16px;font-weight:600;color:var(--g900)">Add Widget</h3>
+      <button class="modal-close" onclick="wbClosePicker()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <p style="font-size:13px;color:var(--g500);margin:0 0 16px">Choose a widget to add to your dashboard.</p>
+      <div class="wb-picker-grid" id="wb-picker-grid">
+        <!-- Populated dynamically by JS -->
+      </div>
+      <div class="wb-picker-empty" id="wb-picker-empty" style="display:none">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--g300)" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <p>All widgets are on your dashboard</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ TARGETS MODAL ══ -->
 <div class="modal-overlay" id="targets-modal" onclick="closeTargetsOutside(event)">
@@ -856,6 +1503,53 @@ tfoot td:first-child{position:sticky;left:0;background:var(--g50);z-index:1;text
   <div class="remed-panel-body" id="unassigned-panel-body"></div>
 </div>
 
+<!-- ══ WORKBENCH LEADS SLIDE-IN PANEL ══ -->
+<div class="remed-backdrop" id="wb-backdrop" onclick="closeWbPanel()"></div>
+<div class="remed-panel" id="wb-panel">
+  <div class="remed-panel-header">
+    <div class="remed-panel-header-top">
+      <div>
+        <div class="remed-panel-title" id="wb-panel-title">Leads</div>
+        <div class="remed-panel-sub" id="wb-panel-sub"></div>
+      </div>
+      <button class="remed-panel-close" onclick="closeWbPanel()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="wb-filter-tabs" id="wb-filter-tabs">
+    <button class="wb-filter-tab active" data-wbf="all" onclick="switchWbFilter('all')">All <span class="wb-ftab-count" id="wbf-cnt-all">0</span></button>
+    <button class="wb-filter-tab" data-wbf="not_contacted" onclick="switchWbFilter('not_contacted')">Not Contacted <span class="wb-ftab-count" id="wbf-cnt-not_contacted">0</span></button>
+    <button class="wb-filter-tab" data-wbf="contacted" onclick="switchWbFilter('contacted')">Contacted <span class="wb-ftab-count" id="wbf-cnt-contacted">0</span></button>
+    <button class="wb-filter-tab" data-wbf="quoted" onclick="switchWbFilter('quoted')">Quoted <span class="wb-ftab-count" id="wbf-cnt-quoted">0</span></button>
+    <button class="wb-filter-tab" data-wbf="submitted" onclick="switchWbFilter('submitted')">Submitted <span class="wb-ftab-count" id="wbf-cnt-submitted">0</span></button>
+  </div>
+  <div class="remed-toolbar">
+    <button class="remed-sort-btn" id="wb-sort-btn" onclick="toggleWbSort()">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M4 5l4-3 4 3M4 11l4 3 4-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="wb-sort-label">Oldest first</span>
+    </button>
+  </div>
+  <div class="remed-panel-body" id="wb-panel-body"></div>
+</div>
+
+<!-- ══ CALLS DETAIL SLIDE-IN PANEL ══ -->
+<div class="remed-backdrop" id="calls-backdrop" onclick="closeCallsSlider()" style="z-index:1002"></div>
+<div class="remed-panel" id="calls-panel" style="z-index:1003">
+  <div class="remed-panel-header">
+    <div class="remed-panel-header-top">
+      <div>
+        <div class="remed-panel-title" id="calls-panel-title">Call History</div>
+        <div class="remed-panel-sub" id="calls-panel-sub"></div>
+      </div>
+      <button class="remed-panel-close" onclick="closeCallsSlider()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="remed-panel-body" id="calls-panel-body"></div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <svg class="toast-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L14 13H2L8 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3M8 10.5h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -874,6 +1568,8 @@ const checksRawData   = {{ checks_rows | tojson }};
 const remedDetails    = {{ remed_details | tojson }};
 const assignedDetails = {{ assigned_details | tojson }};
 const unassignedLeads = {{ unassigned_leads | tojson }};
+const pipelineTiles   = {{ pipeline_tiles | tojson }};
+const pipelineCallDetails = {{ pipeline_call_details | tojson }};
 const LEAD_STATUS     = {{ lead_status | tojson }};
 const CRM_BASE        = "{{ crm_base_url }}";
 // Build per-adviser inforce target inputs inside modal
@@ -909,7 +1605,7 @@ const QF = {
 // ── Targets ──
 const DEFAULTS={
   talkTgt:150,qTgt:6,aTgt:2,
-  infTgts:{181:20000,182:20000,183:20000,152:20000,53:20000},showInfTgt:true,
+  infTgts:{181:20000,182:20000,183:20000,152:20000,53:20000},showInfTgt:false,
   aLineColor:'#7f56d9',infLineColor:'#7f56d9',infTgtColor:'#12B76A',
   talkOn:150,talkNear:120,talkBelow:0,qOn:6,qNear:4,qBelow:0,aOn:2,aNear:1,aBelow:0,infOn:20000,infNear:15000,infBelow:0,
   onColor:'#12B76A',onEnabled:true,nearColor:'#EAB308',nearEnabled:true,belowColor:'#B42318',belowEnabled:true,
@@ -955,7 +1651,7 @@ function showTab(id,el){
 }
 (function(){
   const raw="{{ active_tab }}";
-  const id=(raw==='perf'||raw==='checks')?raw:'perf';
+  const id=(raw==='perf'||raw==='checks'||raw==='workbench')?raw:'perf';
   const te=document.getElementById('tab-'+id),pe=document.getElementById(id);
   if(te&&pe){te.classList.add('active');pe.classList.add('active');}
   else{document.getElementById('tab-perf').classList.add('active');document.getElementById('perf').classList.add('active');}
@@ -1072,6 +1768,7 @@ function filterRows(){
   });
   recalcPerfFooter();
   recalcChecksFooter();
+  recalcWbFooter();
 }
 
 function recalcPerfFooter(){
@@ -1123,14 +1820,43 @@ function recalcChecksFooter(){
   c[14].textContent=td;c[15].textContent=tf;c[16].textContent=tq;
   c[17].textContent=fd;c[18].textContent=ff;c[19].textContent=fq;
 }
+
+function recalcWbFooter(){
+  const tfoot=document.getElementById('wb-team-total-row');
+  if(!tfoot) return;
+  const vis=[...document.querySelectorAll('#wb-perf-tbody .adviser-row')].filter(r=>r.style.display!=='none');
+  const n=vis.length;
+  if(!n){tfoot.style.display='none';return;}
+  tfoot.style.display='';
+  const sum=k=>vis.reduce((s,r)=>s+(parseFloat(r.dataset[k])||0),0);
+  const days=sum('days'),asgn=sum('assigned'),talkS=sum('talkS'),talkPdS=sum('talkPdS');
+  const quotes=sum('quotes'),quoteVal=sum('quoteVal'),apps=sum('apps'),appsVal=sum('appsVal');
+  const infCount=sum('infCount'),infVal=sum('inf'),remT=sum('remedTotal');
+  const avgTalkPd=talkPdS/n, avgQpd=sum('qpd')/n, avgApd=sum('apd')/n;
+  const quoteAvg=quotes?quoteVal/quotes:0, appsAvg=apps?appsVal/apps:0, q2a=quotes?apps/quotes*100:0;
+  const fHMS=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=Math.floor(s%60);return h+':'+String(m).padStart(2,'0')+':'+String(sc).padStart(2,'0');};
+  const fHM=s=>{const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h+':'+String(m).padStart(2,'0');};
+  const fD=v=>'$'+v.toLocaleString('en-AU',{maximumFractionDigits:0});
+  const c=tfoot.querySelectorAll('tr td');
+  c[0].textContent='Team Total';c[1].textContent=days;c[2].textContent=remT;c[3].textContent=asgn;
+  c[4].textContent=talkS?fHMS(talkS):'—';c[5].textContent=fHM(avgTalkPd);
+  c[6].textContent=quotes;c[7].textContent=fD(quoteVal);c[8].textContent=fD(quoteAvg);c[9].textContent=avgQpd.toFixed(1);
+  c[10].textContent=apps;c[11].textContent=fD(appsVal);c[12].textContent=fD(appsAvg);c[13].textContent=avgApd.toFixed(1);
+  c[14].textContent=q2a.toFixed(1)+'%';c[15].textContent=infCount;c[16].textContent=fD(infVal);
+  tfoot.dataset.talkMins=Math.floor(avgTalkPd/60);
+  tfoot.dataset.qpd=avgQpd.toFixed(1);tfoot.dataset.apd=avgApd.toFixed(1);tfoot.dataset.inf=infVal;
+}
 filterRows();
 
 // ── Tooltip ──
 function posTip(icon){
   const tip=icon.parentElement.querySelector('.tip');
   const r=icon.getBoundingClientRect();
-  tip.style.left=(r.left+r.width/2-110)+'px';tip.style.top=(r.top-8)+'px';
-  tip.style.transform='translateY(-100%)';tip.style.display='block';
+  const below=tip.classList.contains('tip-below')||r.top<120;
+  tip.style.left=Math.max(4,r.left+r.width/2-125)+'px';
+  if(below){tip.style.top=(r.bottom+8)+'px';tip.style.transform='none';}
+  else{tip.style.top=(r.top-8)+'px';tip.style.transform='translateY(-100%)';}
+  tip.style.display='block';
   icon.addEventListener('mouseleave',()=>tip.style.display='none',{once:true});
 }
 
@@ -1145,7 +1871,7 @@ function badgeClass(metric,value){
   return 'badge badge-neutral';
 }
 function refreshBadges(){
-  document.querySelectorAll('#perf-tbody tr').forEach(row=>{
+  document.querySelectorAll('#perf-tbody tr, #wb-perf-tbody tr').forEach(row=>{
     if(row.style.display==='none')return;
     const tm=parseFloat(row.dataset.talkMins||0),qpd=parseFloat(row.dataset.qpd||0),
           apd=parseFloat(row.dataset.apd||0),inf=parseFloat(row.dataset.inf||0);
@@ -1153,6 +1879,23 @@ function refreshBadges(){
       const m=b.dataset.badge,val={talk:tm,qpd:qpd,apd:apd,inf:inf}[m]??0;
       b.className=badgeClass(m,val);
     });
+  });
+}
+
+function highlightTopInforce(){
+  document.querySelectorAll('.inf-crown').forEach(e=>e.remove());
+  ['perf-tbody','checks-tbody','wb-perf-tbody'].forEach(tbId=>{
+    const rows=[...document.querySelectorAll('#'+tbId+' .adviser-row')].filter(r=>r.style.display!=='none');
+    if(rows.length<2) return;
+    let maxVal=-1,maxRow=null;
+    rows.forEach(r=>{const v=parseFloat(r.dataset.inf||r.dataset.infVal||0);if(v>maxVal){maxVal=v;maxRow=r;}});
+    if(maxVal<=0||!maxRow) return;
+    const name=maxRow.querySelector('.adviser-name');
+    if(name){
+      const crown=document.createElement('span');
+      crown.className='inf-crown';crown.textContent=' \uD83D\uDC51';crown.title='Top Inforce $ this period';
+      name.appendChild(crown);
+    }
   });
 }
 
@@ -1167,7 +1910,7 @@ function setBeacon(id,value,onV,nearV){
 
 // ── Charts ──
 Chart.defaults.font.family="'Inter',sans-serif";Chart.defaults.font.size=11;
-const ORANGE='#D34108';
+const ORANGE='#D7490D';
 const SLATE='#4d6175';
 const CHART_MODE = "{{ chart_mode }}";
 let labels;
@@ -1195,7 +1938,7 @@ function buildLine(cid,data,name,yFmt,tgtVal,showTgt,lineColor,tgtColor,avgVal,a
   const ctx=document.getElementById(cid);if(!ctx)return;
   if(chartInst[cid])chartInst[cid].destroy();
   const lc=lineColor||SLATE;
-  const tc=tgtColor||'#D34108';
+  const tc=tgtColor||'#D7490D';
   const ac=avgColor||'#1570EF';
   const gradient=makeGradient(ctx.getContext('2d'),lc);
   const ds=[{label:name,data,borderColor:lc,backgroundColor:gradient,borderWidth:2,
@@ -1243,6 +1986,472 @@ function getPerfS(){
   };
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   MODULAR DASHBOARD — Layout engine, edit mode, drag-and-drop
+   ══════════════════════════════════════════════════════════════════════ */
+const WB_REGISTRY={
+  'wb-table':   {label:'Performance Table', desc:'Adviser KPI summary with targets and badges',     full:true,  icon:'tbl',   svg:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>'},
+  'wb-chart':   {label:'Chart',             desc:'Cumulative Applications $ and Inforce $ line chart', full:false, icon:'chart', svg:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'},
+  'wb-pipeline':{label:'Lead Pipeline',     desc:'Metric tiles, Fresh and Stale lead lists',           full:false, icon:'pipe',  svg:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>'},
+  'wb-pipeline2':{label:'Lead Pipeline (Full)',desc:'Full-width pipeline with metric tiles, Fresh and Stale leads', full:true, icon:'pipe2', svg:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="5" rx="1"/><rect x="2" y="10" width="9" height="11" rx="1"/><rect x="13" y="10" width="9" height="11" rx="1"/></svg>'},
+  'wb-lead-table':{label:'Lead Table',    desc:'Full list of all referrals with search, filters and sorting', full:true, icon:'ltbl', svg:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>'}
+};
+const WB_DEFAULT_LAYOUT=['wb-table','wb-chart','wb-pipeline'];
+const WB_LS_KEY='lip_wb_layout';
+
+let _wbLayout=[];
+let _wbEditing=false;
+
+function wbLoadLayout(){
+  try{
+    const raw=localStorage.getItem(WB_LS_KEY);
+    if(raw){const arr=JSON.parse(raw);if(Array.isArray(arr)&&arr.length)return arr.filter(id=>WB_REGISTRY[id]);}
+  }catch(e){}
+  return [...WB_DEFAULT_LAYOUT];
+}
+function wbSaveLayout(){
+  try{localStorage.setItem(WB_LS_KEY,JSON.stringify(_wbLayout));}catch(e){}
+}
+
+function wbApplyLayout(){
+  const container=document.getElementById('wb-container');
+  if(!container) return;
+
+  /* Collect all widget elements */
+  const allWidgets={};
+  container.querySelectorAll('.wb-widget').forEach(el=>{
+    allWidgets[el.dataset.widgetId]=el;
+    el.classList.remove('wb-hidden');
+    el.remove();
+  });
+  /* Remove any dynamic grid wrappers and placeholders */
+  container.querySelectorAll('.wb-container-grid,.wb-add-placeholder,.wb-drop-indicator').forEach(el=>el.remove());
+
+  /* Append in layout order, grouping consecutive half-width widgets */
+  let halfBuf=[];
+  function flushHalves(){
+    if(!halfBuf.length) return;
+    const grid=document.createElement('div');
+    grid.className='wb-container-grid';
+    halfBuf.forEach(w=>grid.appendChild(w));
+    container.appendChild(grid);
+    halfBuf=[];
+  }
+
+  _wbLayout.forEach(id=>{
+    const w=allWidgets[id];
+    if(!w) return;
+    const reg=WB_REGISTRY[id];
+    if(reg&&!reg.full){
+      halfBuf.push(w);
+      if(halfBuf.length===2) flushHalves();
+    } else {
+      flushHalves();
+      container.appendChild(w);
+    }
+    delete allWidgets[id]; /* mark as placed */
+  });
+  flushHalves();
+
+  /* Hide widgets not in layout (keep in DOM for re-adding) */
+  Object.values(allWidgets).forEach(w=>{
+    w.classList.add('wb-hidden');
+    container.appendChild(w);
+  });
+
+  /* Add "+" placeholder if in edit mode and there are hidden widgets */
+  const hiddenCount=Object.keys(WB_REGISTRY).length - _wbLayout.length;
+  if(_wbEditing && hiddenCount>0){
+    const ph=document.createElement('div');
+    ph.className='wb-add-placeholder';
+    ph.onclick=wbOpenPicker;
+    ph.innerHTML='<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Add widget</span>';
+    container.appendChild(ph);
+  }
+}
+
+/* ── Edit mode ── */
+function wbEnterEdit(){
+  _wbEditing=true;
+  document.body.classList.add('wb-editing');
+  wbApplyLayout();
+  wbInitDrag();
+}
+function wbExitEdit(){
+  _wbEditing=false;
+  document.body.classList.remove('wb-editing');
+  wbSaveLayout();
+  wbApplyLayout();
+  /* Re-render charts & metrics after DOM moves */
+  try{rebuildWbChart(getPerfS());}catch(e){}
+  try{computeWbMetrics();}catch(e){}
+  try{computeWbMetricsP2();}catch(e){}
+  try{wbLtRender();}catch(e){}
+}
+function wbResetLayout(){
+  _wbLayout=[...WB_DEFAULT_LAYOUT];
+  wbApplyLayout();
+}
+
+/* ── Add / Remove ── */
+function wbRemoveWidget(id){
+  _wbLayout=_wbLayout.filter(x=>x!==id);
+  wbSaveLayout();
+  wbApplyLayout();
+}
+function wbAddWidget(id){
+  if(!_wbLayout.includes(id)){
+    _wbLayout.push(id);
+    wbSaveLayout();
+    wbApplyLayout();
+  }
+  wbClosePicker();
+}
+
+/* ── Widget Picker ── */
+function wbOpenPicker(){
+  const grid=document.getElementById('wb-picker-grid');
+  const empty=document.getElementById('wb-picker-empty');
+  grid.innerHTML='';
+  const available=Object.keys(WB_REGISTRY).filter(id=>!_wbLayout.includes(id));
+  if(!available.length){
+    grid.style.display='none';
+    empty.style.display='flex';
+  } else {
+    grid.style.display='grid';
+    empty.style.display='none';
+    available.forEach(id=>{
+      const r=WB_REGISTRY[id];
+      const card=document.createElement('div');
+      card.className='wb-picker-card';
+      card.onclick=()=>wbAddWidget(id);
+      card.innerHTML=`<div class="wb-picker-icon ${r.icon}">${r.svg}</div><div class="wb-picker-info"><h4>${r.label}</h4><p>${r.desc}</p></div><span class="wb-picker-add">+ Add</span>`;
+      grid.appendChild(card);
+    });
+  }
+  document.getElementById('wb-picker-modal').classList.add('open');
+}
+function wbClosePicker(){
+  document.getElementById('wb-picker-modal').classList.remove('open');
+}
+function wbClosePickerOutside(e){
+  if(e.target===e.currentTarget) wbClosePicker();
+}
+
+/* ── Drag-and-Drop ── */
+let _dragWidget=null;
+function wbInitDrag(){
+  const container=document.getElementById('wb-container');
+  if(!container) return;
+
+  container.addEventListener('dragstart',e=>{
+    const w=e.target.closest('.wb-widget');
+    if(!w||!_wbEditing) return;
+    _dragWidget=w;
+    w.classList.add('dragging');
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',w.dataset.widgetId);
+  });
+
+  container.addEventListener('dragend',e=>{
+    if(_dragWidget) _dragWidget.classList.remove('dragging');
+    _dragWidget=null;
+    container.querySelectorAll('.wb-drop-indicator').forEach(el=>el.classList.remove('active'));
+  });
+
+  container.addEventListener('dragover',e=>{
+    if(!_wbEditing||!_dragWidget) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect='move';
+
+    /* Find the widget we're hovering over */
+    const target=e.target.closest('.wb-widget');
+    if(!target||target===_dragWidget) return;
+
+    const rect=target.getBoundingClientRect();
+    const midY=rect.top+rect.height/2;
+    const insertBefore=e.clientY<midY;
+
+    /* Show drop indicator */
+    container.querySelectorAll('.wb-drop-indicator').forEach(el=>el.remove());
+    const indicator=document.createElement('div');
+    indicator.className='wb-drop-indicator active';
+    if(insertBefore){
+      target.parentElement.insertBefore(indicator,target);
+    } else {
+      target.parentElement.insertBefore(indicator,target.nextSibling);
+    }
+  });
+
+  container.addEventListener('drop',e=>{
+    e.preventDefault();
+    if(!_dragWidget||!_wbEditing) return;
+    const dragId=_dragWidget.dataset.widgetId;
+    const target=e.target.closest('.wb-widget');
+    if(!target) return;
+
+    const targetId=target.dataset.widgetId;
+    if(dragId===targetId) return;
+
+    /* Reorder _wbLayout */
+    const fromIdx=_wbLayout.indexOf(dragId);
+    let toIdx=_wbLayout.indexOf(targetId);
+    if(fromIdx<0||toIdx<0) return;
+
+    /* Remove dragged item */
+    _wbLayout.splice(fromIdx,1);
+    /* Re-find target index after removal */
+    toIdx=_wbLayout.indexOf(targetId);
+
+    const rect=target.getBoundingClientRect();
+    const insertBefore=e.clientY<(rect.top+rect.height/2);
+    if(insertBefore){
+      _wbLayout.splice(toIdx,0,dragId);
+    } else {
+      _wbLayout.splice(toIdx+1,0,dragId);
+    }
+
+    _dragWidget.classList.remove('dragging');
+    _dragWidget=null;
+    wbSaveLayout();
+    wbApplyLayout();
+    wbInitDrag(); /* re-bind on new DOM */
+  });
+
+  /* Make widgets draggable in edit mode */
+  container.querySelectorAll('.wb-widget:not(.wb-hidden)').forEach(w=>{
+    w.setAttribute('draggable','true');
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LEAD TABLE WIDGET — full referral list with filters
+   ══════════════════════════════════════════════════════════════════════ */
+const WB_LT_STATUS={0:'Not Contacted',1:'Contacted',3:'Quoted',4:'Submitted',5:'Won',6:'Lost'};
+let _wbLtPage=1;
+const WB_LT_PAGE_SIZE=25;
+
+/* Build the adviser <select> options */
+function wbLtInitAdviserFilter(){
+  const sel=document.getElementById('wb-lt-adviser');
+  if(!sel) return;
+  while(sel.options.length>1) sel.remove(1);
+  allAdvisers.forEach(a=>{
+    if(!selectedAdvisers.has(a.uid)) return;
+    const opt=document.createElement('option');
+    opt.value=a.uid;
+    opt.textContent=a.name;
+    sel.appendChild(opt);
+  });
+}
+
+function wbLtInitDynamicFilters(){
+  const all=wbLtGetAllLeads();
+  const srcSel=document.getElementById('wb-lt-source');
+  const refSel=document.getElementById('wb-lt-referrer');
+  const curSrc=srcSel?srcSel.value:'all';
+  const curRef=refSel?refSel.value:'all';
+
+  /* Referral Partner dropdown — filtered by current referrer selection */
+  if(srcSel){
+    const pool=curRef!=='all'?all.filter(l=>(l.referrer||'').trim()===curRef):all;
+    while(srcSel.options.length>1) srcSel.remove(1);
+    const sources=[...new Set(pool.map(l=>(l.source||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    sources.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;srcSel.appendChild(o);});
+    if([...srcSel.options].some(o=>o.value===curSrc)) srcSel.value=curSrc; else srcSel.value='all';
+  }
+
+  /* Referrer dropdown — filtered by current referral partner selection */
+  if(refSel){
+    const pool=curSrc!=='all'?all.filter(l=>(l.source||'').trim()===curSrc):all;
+    while(refSel.options.length>1) refSel.remove(1);
+    const referrers=[...new Set(pool.map(l=>(l.referrer||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    referrers.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;refSel.appendChild(o);});
+    if([...refSel.options].some(o=>o.value===curRef)) refSel.value=curRef; else refSel.value='all';
+  }
+}
+
+/* Get all leads flattened with adviser info */
+function wbLtGetAllLeads(){
+  let all=[];
+  selectedAdvisers.forEach(uid=>{
+    const leads=assignedDetails[uid]||[];
+    const adv=allAdvisers.find(a=>a.uid===uid);
+    const advName=adv?adv.name:'Unknown';
+    const advInit=adv?adv.initials:'??';
+    const advColor=adv?.avatar_color||'#667085';
+    const advAvatar=adv?.avatar_url||'';
+    leads.forEach(l=>{
+      all.push({...l,_uid:uid,_advName:advName,_advInit:advInit,_advColor:advColor,_advAvatar:advAvatar});
+    });
+  });
+  return all;
+}
+
+/* Open/Not Open check: uses is_closed flag from close/open actions */
+function wbLtIsOpen(lead){ return !lead.is_closed; }
+
+/* Pipeline tile → table filter state */
+let _wbLtPipelineFilter=null;
+let _wbLtPipelineStage=null;
+
+/* Apply filters + sort */
+function wbLtFilter(leads){
+  const q=(document.getElementById('wb-lt-search').value||'').toLowerCase().trim();
+  const openVal=document.getElementById('wb-lt-open').value;
+  const statusVal=document.getElementById('wb-lt-status').value;
+  const srcVal=document.getElementById('wb-lt-source').value;
+  const refVal=document.getElementById('wb-lt-referrer').value;
+  const advVal=document.getElementById('wb-lt-adviser').value;
+  const sortVal=document.getElementById('wb-lt-sort').value;
+
+  let filtered=leads;
+  if(_wbLtPipelineFilter) filtered=filtered.filter(l=>_wbLtPipelineFilter.has(l.lead_id));
+  if(q){
+    filtered=filtered.filter(l=>
+      (l.client_name||'').toLowerCase().includes(q)||
+      (l.source||'').toLowerCase().includes(q)||
+      (l.referrer||'').toLowerCase().includes(q)||
+      (l._advName||'').toLowerCase().includes(q)||
+      String(l.lead_id).includes(q)
+    );
+  }
+  if(openVal==='open')   filtered=filtered.filter(l=>wbLtIsOpen(l));
+  if(openVal==='closed') filtered=filtered.filter(l=>!wbLtIsOpen(l));
+  if(statusVal!=='all')  filtered=filtered.filter(l=>(l.working_stage??l.status)===parseInt(statusVal));
+  if(srcVal!=='all')     filtered=filtered.filter(l=>(l.source||'').trim()===srcVal);
+  if(refVal!=='all')     filtered=filtered.filter(l=>(l.referrer||'').trim()===refVal);
+  if(advVal!=='all')     filtered=filtered.filter(l=>l._uid===parseInt(advVal));
+
+  /* Sort */
+  filtered.sort((a,b)=>{
+    if(sortVal==='newest')      return (b.assigned_at||'').localeCompare(a.assigned_at||'');
+    if(sortVal==='oldest')      return (a.assigned_at||'').localeCompare(b.assigned_at||'');
+    if(sortVal==='created-new') return (b.created_at||'').localeCompare(a.created_at||'');
+    if(sortVal==='created-old') return (a.created_at||'').localeCompare(b.created_at||'');
+    if(sortVal==='name')        return (a.client_name||'').localeCompare(b.client_name||'');
+    if(sortVal==='status')      return a.status-b.status;
+    return 0;
+  });
+  return filtered;
+}
+
+/* Time since assigned — human-readable with days/hours/mins */
+function wbLtTimeSince(dateStr){
+  if(!dateStr) return '—';
+  const d=new Date(dateStr);
+  const now=new Date();
+  const diffMs=now-d;
+  if(diffMs<0) return '—';
+  const mins=Math.floor(diffMs/60000);
+  const hrs=Math.floor(mins/60);
+  const days=Math.floor(hrs/24);
+  if(days>0){
+    const remHrs=hrs%24;
+    return days+'d'+(remHrs?' '+remHrs+'h':'');
+  }
+  if(hrs>0){
+    const remMins=mins%60;
+    return hrs+'h'+(remMins?' '+remMins+'m':'');
+  }
+  return mins+'m';
+}
+
+/* Build a single table row for a lead */
+function wbLtBuildRow(l){
+  const ws=l.working_stage??l.status;
+  const wsLabel=WB_LT_STATUS[ws]||'Unknown';
+  const isOpen=wbLtIsOpen(l);
+  const openLabel=isOpen?'Open':'Not Open';
+  const openCls=isOpen?'open':'closed';
+  const calls=pipelineCallDetails[l.lead_id]||pipelineCallDetails[String(l.lead_id)]||[];
+  const callCount=calls.length;
+  const callTd=callCount>0
+    ?'<td><a href="#" class="wb-calls-link assigned-link" data-lead-id="'+l.lead_id+'" data-client="'+esc(l.client_name||'Unnamed')+'">'+callCount+'</a></td>'
+    :'<td>0</td>';
+  const tr=document.createElement('tr');
+  tr.onclick=function(){window.open(CRM_BASE+'/leads/'+l.lead_id+'/','_blank');};
+  tr.innerHTML=
+    '<td>'+(l.created_date||'—')+'</td>'+
+    '<td><div class="wb-lt-lead-name">'+esc(l.client_name||'Unnamed')+'</div><div class="wb-lt-lead-id">#'+l.lead_id+'</div></td>'+
+    '<td><span class="wb-lt-open-badge '+openCls+'">'+openLabel+'</span></td>'+
+    '<td><span class="wb-lt-badge s'+ws+'">'+wsLabel+'</span></td>'+
+    callTd+
+    '<td>'+esc(l.source||'—')+'</td>'+
+    '<td>'+esc(l.referrer||'—')+'</td>'+
+    '<td><div class="wb-lt-adviser-cell">'+
+      (l._advAvatar
+        ? '<img class="wb-lt-avatar-img" src="'+l._advAvatar+'" alt="'+esc(l._advName)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="wb-lt-avatar" style="display:none;background:'+l._advColor+'">'+esc(l._advInit)+'</div>'
+        : '<div class="wb-lt-avatar" style="background:'+l._advColor+'">'+esc(l._advInit)+'</div>'
+      )+esc(l._advName)+'</div></td>'+
+    '<td>'+(l.assigned_date||'—')+'</td>'+
+    '<td>'+wbLtTimeSince(l.assigned_at)+'</td>';
+  return tr;
+}
+
+/* Render the table */
+function wbLtRender(){
+  _wbLtPage=1;
+  wbLtInitAdviserFilter();
+  wbLtInitDynamicFilters();
+  const all=wbLtGetAllLeads();
+  const filtered=wbLtFilter(all);
+  const tbody=document.getElementById('wb-lt-tbody');
+  if(!tbody) return;
+
+  const countEl=document.getElementById('wb-lt-count');
+  if(countEl) countEl.textContent=filtered.length+' lead'+(filtered.length!==1?'s':'');
+
+  const showing=filtered.slice(0,_wbLtPage*WB_LT_PAGE_SIZE);
+  tbody.innerHTML='';
+
+  if(!showing.length){
+    tbody.innerHTML='<tr><td colspan="10" class="wb-lt-empty">No leads match your filters</td></tr>';
+    document.getElementById('wb-lt-load-more').style.display='none';
+    return;
+  }
+
+  showing.forEach(l=>tbody.appendChild(wbLtBuildRow(l)));
+
+  const more=document.getElementById('wb-lt-load-more');
+  if(filtered.length>showing.length){
+    more.style.display='inline-block';
+    more.textContent='Show more ('+showing.length+' of '+filtered.length+')';
+  } else {
+    more.style.display='none';
+  }
+}
+
+function wbLtShowMore(){
+  _wbLtPage++;
+  const all=wbLtGetAllLeads();
+  const filtered=wbLtFilter(all);
+  const tbody=document.getElementById('wb-lt-tbody');
+  if(!tbody) return;
+
+  const start=(_wbLtPage-1)*WB_LT_PAGE_SIZE;
+  const page=filtered.slice(start,start+WB_LT_PAGE_SIZE);
+  page.forEach(l=>tbody.appendChild(wbLtBuildRow(l)));
+
+  const showing=_wbLtPage*WB_LT_PAGE_SIZE;
+  const more=document.getElementById('wb-lt-load-more');
+  if(filtered.length>showing){
+    more.style.display='inline-block';
+    more.textContent='Show more ('+Math.min(showing,filtered.length)+' of '+filtered.length+')';
+  } else {
+    more.style.display='none';
+  }
+}
+
+/* Helper — escape HTML */
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+/* ── Init ── */
+(function wbLayoutInit(){
+  _wbLayout=wbLoadLayout();
+  wbApplyLayout();
+})();
+
 function fmtMins(m){const h=Math.floor(m/60),mn=Math.round(m%60);return h+':'+String(mn).padStart(2,'0');}
 function fmtMoney(v){if(v>=1e6)return'$'+(v/1e6).toFixed(1)+'M';if(v>=1000)return'$'+(v/1000).toFixed(1)+'k';return'$'+v.toFixed(0);}
 function avg(arr){const nz=arr.filter(v=>v>0);return nz.length?nz.reduce((s,v)=>s+v,0)/nz.length:0;}
@@ -1285,14 +2494,366 @@ function rebuildCharts(){
   const el4=document.getElementById('kpi-checks-inf');if(el4)el4.textContent=fmtMoney(totInf);
   setBeacon('beacon-checks-inf',totInf,infScaledTgt,infScaledTgt*0.75);
 
+  // ── Workbench tab chart + metrics ──
+  rebuildWbChart(ps);
+  computeWbMetrics();
+  computeWbMetricsP2();
+  try{wbLtRender();}catch(e){}
+
   refreshBadges();
+  highlightTopInforce();
+}
+
+// ── Workbench chart toggle ──
+let _wbChartMode='apps';
+
+function wbSwitchChart(mode){
+  _wbChartMode=mode;
+  document.getElementById('wb-toggle-apps').classList.toggle('active',mode==='apps');
+  document.getElementById('wb-toggle-inf').classList.toggle('active',mode==='inforce');
+  rebuildWbChart(getPerfS());
+}
+
+function rebuildWbChart(ps){
+  if(!document.getElementById('wb-chart-canvas')) return;
+  if(!ps) ps=getPerfS();
+  const cumApps=cumulative(ps.apps_val);
+  const cumInf=cumulative(ps.inforce_val);
+  const totApps=total(ps.apps_val);
+  const totInf=total(ps.inforce_val);
+  // Inforce target (same logic as Performance tab)
+  const chosen=allAdvisers.filter(a=>selectedAdvisers.has(a.uid));
+  let infTgt;
+  if(chosen.length>1) infTgt=chosen.reduce((s,a)=>s+(T.infTgts[a.uid]||20000),0);
+  else if(chosen.length===1) infTgt=T.infTgts[chosen[0].uid]||20000;
+  else infTgt=20000;
+
+  if(_wbChartMode==='apps'){
+    document.getElementById('wb-chart-label').textContent='APPLICATIONS $';
+    document.getElementById('wb-chart-sub').textContent='cumulative application commission';
+    document.getElementById('wb-chart-total').textContent=fmtMoney(totApps);
+    buildLine('wb-chart-canvas',cumApps,ps.name,fmtMoney,null,false,T.aLineColor);
+  } else {
+    document.getElementById('wb-chart-label').textContent='INFORCE $';
+    document.getElementById('wb-chart-sub').textContent='cumulative inforce commission';
+    document.getElementById('wb-chart-total').textContent=fmtMoney(totInf);
+    buildLine('wb-chart-canvas',cumInf,ps.name,fmtMoney,infTgt,T.showInfTgt,T.infLineColor,T.infTgtColor);
+  }
+}
+
+// ── Workbench mode (Funnel Progression vs Total Activity) ──
+const _wbMode='{{ wb_mode }}';
+
+// ── Workbench metric widgets ──
+function getAllWbLeads(){
+  let allLeads=[];
+  selectedAdvisers.forEach(uid=>{
+    const leads=assignedDetails[uid]||[];
+    allLeads=allLeads.concat(leads.map(l=>({...l,_uid:uid})));
+  });
+  return allLeads;
+}
+
+const AVATAR_COLORS=['#6366F1','#8B5CF6','#EC4899','#F97316','#14B8A6','#3B82F6','#EF4444','#10B981','#F59E0B','#6D28D9'];
+function leadAvatarColor(name){return AVATAR_COLORS[Math.abs([...name].reduce((a,c)=>a+c.charCodeAt(0),0))%AVATAR_COLORS.length];}
+function leadInitials(name){const p=(name||'?').split(/\s+/);return p.length>=2?(p[0][0]+p[p.length-1][0]).toUpperCase():(p[0]||'?').slice(0,2).toUpperCase();}
+function timeAgo(isoStr){
+  if(!isoStr) return '';
+  const d=new Date(isoStr),now=new Date(),ms=now-d;
+  if(ms<0) return 'just now';
+  const mins=Math.floor(ms/60000);
+  if(mins<1) return 'just now';
+  if(mins<60) return mins+'m ago';
+  const hrs=Math.floor(mins/60);
+  if(hrs<24) return hrs+'h ago';
+  const days=Math.floor(hrs/24);
+  return days+'d ago';
+}
+
+/* Stage dropdown stays enabled — uses working_stage which tracks
+   the last meaningful stage a lead reached before closing. */
+
+function computeWbMetrics(){
+  const allLeads=getAllWbLeads();
+  const el=id=>document.getElementById(id);
+  if(!el('wb-count-not-contacted')) return;
+  el('wb-count-not-contacted').textContent=allLeads.filter(l=>l.status===0).length;
+  el('wb-count-contacted').textContent=allLeads.filter(l=>l.status===1).length;
+  el('wb-count-quoted').textContent=allLeads.filter(l=>l.status===3).length;
+  el('wb-count-submitted').textContent=allLeads.filter(l=>l.status===4).length;
+
+  // New Leads & Stale Leads — thresholds + stage + open/closed filters
+  /* Open/closed now uses is_closed flag from close/open actions */
+  const now=new Date();
+  const toMs=(val,unit)=>{const v=parseInt(val)||1;return unit==='min'?v*60000:unit==='hrs'?v*3600000:v*86400000;};
+  const newMs=toMs(el('wb-new-val')?.value,el('wb-new-unit')?.value||'min');
+  const negMs=toMs(el('wb-neglected-val')?.value,el('wb-neglected-unit')?.value||'hrs');
+  const newStage=el('wb-new-stage')?.value||'all';
+  const staleStage=el('wb-stale-stage')?.value||'all';
+  const newOpen=el('wb-new-open')?.value||'open';
+  const staleOpen=el('wb-stale-open')?.value||'open';
+  const openFilter=(leads,mode)=>{
+    if(mode==='open')   return leads.filter(l=>!l.is_closed);
+    if(mode==='closed') return leads.filter(l=>l.is_closed);
+    return leads;
+  };
+  const stageFilter=(leads,stage)=>stage==='all'?leads:leads.filter(l=>(l.working_stage??l.status)===parseInt(stage));
+
+  const freshPool=stageFilter(openFilter(allLeads,newOpen),newStage);
+  const newLeads=freshPool.filter(l=>{
+    if(!l.assigned_at) return false;
+    return (now-new Date(l.assigned_at))<newMs;
+  }).sort((a,b)=>new Date(b.assigned_at)-new Date(a.assigned_at));
+
+  const stalePool=stageFilter(openFilter(allLeads,staleOpen),staleStage);
+  const staleLeads=stalePool.filter(l=>{
+    if(!l.assigned_at) return false;
+    return (now-new Date(l.assigned_at))>negMs;
+  }).sort((a,b)=>new Date(a.assigned_at)-new Date(b.assigned_at));
+
+  el('wb-new-badge').textContent=newLeads.length;
+  el('wb-neglected-badge').textContent=staleLeads.length;
+  document.getElementById('wb-widget-new')?.classList.toggle('has-leads',newLeads.length>0);
+  document.getElementById('wb-widget-neglected')?.classList.toggle('has-leads',staleLeads.length>0);
+  renderWbListWidget('wb-new-body',newLeads.slice(0,3),'No fresh leads in this period',WB_GREENS);
+  renderWbListWidget('wb-neglected-body',staleLeads.slice(0,3),'No stale leads',WB_REDS);
+}
+
+/* ── Pipeline 2 (full-width clone) ── */
+function computeWbMetricsP2(){
+  const allLeads=getAllWbLeads();
+  const el=id=>document.getElementById(id);
+  if(!el('wb-count-not-contacted-p2')) return;
+  el('wb-count-not-contacted-p2').textContent=allLeads.filter(l=>l.status===0).length;
+  el('wb-count-contacted-p2').textContent=allLeads.filter(l=>l.status===1).length;
+  el('wb-count-quoted-p2').textContent=allLeads.filter(l=>l.status===3).length;
+  el('wb-count-submitted-p2').textContent=allLeads.filter(l=>l.status===4).length;
+
+  const now=new Date();
+  const toMs=(val,unit)=>{const v=parseInt(val)||1;return unit==='min'?v*60000:unit==='hrs'?v*3600000:v*86400000;};
+  const newMs=toMs(el('wb-new-val-p2')?.value,el('wb-new-unit-p2')?.value||'min');
+  const negMs=toMs(el('wb-neglected-val-p2')?.value,el('wb-neglected-unit-p2')?.value||'hrs');
+  const newStage=el('wb-new-stage-p2')?.value||'all';
+  const staleStage=el('wb-stale-stage-p2')?.value||'all';
+  const newOpen=el('wb-new-open-p2')?.value||'open';
+  const staleOpen=el('wb-stale-open-p2')?.value||'open';
+  const openFilter=(leads,mode)=>{
+    if(mode==='open')   return leads.filter(l=>!l.is_closed);
+    if(mode==='closed') return leads.filter(l=>l.is_closed);
+    return leads;
+  };
+  const stageFilter=(leads,stage)=>stage==='all'?leads:leads.filter(l=>(l.working_stage??l.status)===parseInt(stage));
+
+  const freshPool=stageFilter(openFilter(allLeads,newOpen),newStage);
+  const newLeads=freshPool.filter(l=>{
+    if(!l.assigned_at) return false;
+    return (now-new Date(l.assigned_at))<newMs;
+  }).sort((a,b)=>new Date(b.assigned_at)-new Date(a.assigned_at));
+
+  const stalePool=stageFilter(openFilter(allLeads,staleOpen),staleStage);
+  const staleLeads=stalePool.filter(l=>{
+    if(!l.assigned_at) return false;
+    return (now-new Date(l.assigned_at))>negMs;
+  }).sort((a,b)=>new Date(a.assigned_at)-new Date(b.assigned_at));
+
+  el('wb-new-badge-p2').textContent=newLeads.length;
+  el('wb-neglected-badge-p2').textContent=staleLeads.length;
+  document.getElementById('wb-widget-new-p2')?.classList.toggle('has-leads',newLeads.length>0);
+  document.getElementById('wb-widget-neglected-p2')?.classList.toggle('has-leads',staleLeads.length>0);
+  renderWbListWidget('wb-new-body-p2',newLeads.slice(0,3),'No fresh leads in this period',WB_GREENS);
+  renderWbListWidget('wb-neglected-body-p2',staleLeads.slice(0,3),'No stale leads',WB_REDS);
+}
+
+// Gradient avatar palettes: dark → light (Untitled UI green / red)
+const WB_GREENS=['#087443','#12B76A','#47CD89'];
+const WB_REDS=['#912018','#D92D20','#F04438'];
+
+function renderWbListWidget(bodyId,items,emptyMsg,palette){
+  const body=document.getElementById(bodyId);
+  if(!body) return;
+  if(!items.length){body.innerHTML=`<div class="wb-list-empty">${emptyMsg}</div>`;return;}
+  body.innerHTML=items.map((it,i)=>{
+    const name=it.client_name||'Lead #'+it.lead_id;
+    const ini=leadInitials(name);
+    const bg=palette?palette[Math.min(i,palette.length-1)]:leadAvatarColor(name);
+    const advName=allAdvisers.find(a=>a.uid===it._uid)?.name||'';
+    const sub=[it.source,advName].filter(Boolean).join(' · ')||'Lead #'+it.lead_id;
+    const ago=timeAgo(it.assigned_at);
+    const url=`${CRM_BASE}/leads/${it.lead_id}/`;
+    return `<a class="wb-list-item" href="${url}" target="_blank" style="--i:${i}">
+      <div class="wb-list-avatar" style="background:${bg}">${ini}</div>
+      <div class="wb-list-info">
+        <div class="wb-list-name">${name}</div>
+        <div class="wb-list-sub">${sub}</div>
+      </div>
+      <div class="wb-list-time">${ago}</div>
+    </a>`;
+  }).join('');
+}
+
+// ── Workbench slider panel ──
+let _wbMetric=null;
+let _wbFilter='all';
+let _wbSortAsc=true;
+let _wbExpandTimers={};
+
+const WB_LABELS={contacted:'Contacted',not_contacted:'Not Contacted',quoted:'Quoted',submitted:'Submitted'};
+
+function getWbLeads(filter){
+  const allLeads=getAllWbLeads();
+  switch(filter){
+    case 'contacted':    return allLeads.filter(l=>l.status===1);
+    case 'not_contacted':return allLeads.filter(l=>l.status===0);
+    case 'quoted':       return allLeads.filter(l=>l.status===3);
+    case 'submitted':    return allLeads.filter(l=>l.status===4);
+    case 'all': default: return [...allLeads];
+  }
+}
+
+function openWbPanel(metric){
+  _wbMetric=metric;
+  _wbFilter=metric;
+  _wbSortAsc=true;
+  document.getElementById('wb-sort-label').textContent='Oldest first';
+  document.getElementById('wb-panel-title').textContent=WB_LABELS[metric]||'All Leads';
+  // Set active filter tab
+  document.querySelectorAll('.wb-filter-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.wbf===metric);
+  });
+  updateWbFilterCounts();
+  updateWbPanel();
+  document.getElementById('wb-backdrop').classList.add('open');
+  document.getElementById('wb-panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function switchWbFilter(filter){
+  _wbFilter=filter;
+  document.querySelectorAll('.wb-filter-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.wbf===filter);
+  });
+  document.getElementById('wb-panel-title').textContent=
+    filter==='all'?'All Leads':(WB_LABELS[filter]||'Leads');
+  updateWbPanel();
+}
+
+function updateWbFilterCounts(){
+  const all=getAllWbLeads();
+  const el=id=>document.getElementById(id);
+  if(el('wbf-cnt-all')) el('wbf-cnt-all').textContent=all.length;
+  if(el('wbf-cnt-contacted')) el('wbf-cnt-contacted').textContent=all.filter(l=>l.status===1).length;
+  if(el('wbf-cnt-not_contacted')) el('wbf-cnt-not_contacted').textContent=all.filter(l=>l.status===0).length;
+  if(el('wbf-cnt-quoted')) el('wbf-cnt-quoted').textContent=all.filter(l=>l.status===3).length;
+  if(el('wbf-cnt-submitted')) el('wbf-cnt-submitted').textContent=all.filter(l=>l.status===4).length;
+}
+
+function updateWbPanel(){
+  let items=getWbLeads(_wbFilter);
+  items.sort((a,b)=>_wbSortAsc
+    ? a.assigned_date.localeCompare(b.assigned_date)
+    : b.assigned_date.localeCompare(a.assigned_date));
+  document.getElementById('wb-panel-sub').textContent=items.length+' lead'+(items.length!==1?'s':'');
+  renderWbCards(items);
+}
+
+function renderWbCards(items){
+  const body=document.getElementById('wb-panel-body');
+  Object.values(_wbExpandTimers).forEach(clearTimeout);
+  _wbExpandTimers={};
+  if(!items.length){
+    body.innerHTML='<div class="remed-empty">No leads found for this category.</div>';
+    return;
+  }
+  body.innerHTML=items.map((it,idx)=>{
+    const stLbl=LEAD_STATUS[it.status]||'Unknown';
+    const stCls=LEAD_STATUS_CLS[it.status]||'';
+    const clientName=it.client_name||'Client #'+it.lead_id;
+    const beaconCls=remedAgeBeacon(it.assigned_date);
+    const advName=allAdvisers.find(a=>a.uid===it._uid)?.name||'';
+    const src=it.source||'';
+    const url=`${CRM_BASE}/leads/${it.lead_id}/`;
+    return `<a class="remed-card" href="${url}" target="_blank">
+      <div class="remed-card-top">
+        <div class="remed-card-client">${clientName}</div>
+        <div class="remed-card-date-wrap">
+          <span class="${beaconCls}"></span>
+          <span class="remed-card-date">${it.assigned_date}</span>
+        </div>
+      </div>
+      <div class="remed-card-field">
+        <div class="remed-card-label">Status</div>
+        <div class="remed-card-value"><span class="remed-status ${stCls}">${stLbl}</span></div>
+      </div>
+      ${advName?`<div class="remed-card-field">
+        <div class="remed-card-label">Adviser</div>
+        <div class="remed-card-value">${advName}</div>
+      </div>`:''}
+      ${src?`<div class="remed-card-field">
+        <div class="remed-card-label">Source</div>
+        <div class="remed-card-value">${src}</div>
+      </div>`:''}
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-wbidx="u${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last user generated note
+        </button>
+        <div class="remed-accordion-body" id="wb-note-u${idx}">
+          <div class="remed-accordion-text">${it.user_note||'No information provided'}</div>
+        </div>
+      </div>
+      <div class="remed-accordion">
+        <button class="remed-accordion-btn" data-wbidx="s${idx}">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Last system generated note
+        </button>
+        <div class="remed-accordion-body" id="wb-note-s${idx}">
+          <div class="remed-accordion-text">${it.system_note||'No information provided'}</div>
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+document.addEventListener('click',function(e){
+  const btn=e.target.closest('[data-wbidx]');
+  if(!btn||!btn.classList.contains('remed-accordion-btn')) return;
+  e.preventDefault();e.stopPropagation();
+  const idx=btn.dataset.wbidx;
+  const body=document.getElementById('wb-note-'+idx);
+  if(!body) return;
+  const isOpen=btn.classList.toggle('open');
+  body.classList.toggle('open',isOpen);
+  if(_wbExpandTimers[idx]){clearTimeout(_wbExpandTimers[idx]);delete _wbExpandTimers[idx];}
+  if(isOpen){
+    _wbExpandTimers[idx]=setTimeout(()=>{
+      btn.classList.remove('open');body.classList.remove('open');
+      delete _wbExpandTimers[idx];
+    },20000);
+  }
+});
+
+function toggleWbSort(){
+  _wbSortAsc=!_wbSortAsc;
+  document.getElementById('wb-sort-label').textContent=_wbSortAsc?'Oldest first':'Newest first';
+  updateWbPanel();
+}
+
+function closeWbPanel(){
+  document.getElementById('wb-backdrop').classList.remove('open');
+  document.getElementById('wb-panel').classList.remove('open');
+  document.body.style.overflow='';
+  Object.values(_wbExpandTimers).forEach(clearTimeout);
+  _wbExpandTimers={};
 }
 
 // Hide loading overlay — always remove on load regardless of errors
-window.addEventListener('load', () => document.getElementById('loading-overlay').classList.remove('active'));
+function hideLoading(){ const o=document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); }
+window.addEventListener('load', hideLoading);
+// Fallback: force-hide after 8s in case load event is delayed
+setTimeout(hideLoading, 8000);
 try { rebuildCharts(); } catch(e) {
   console.error('Chart build error:', e);
-  document.getElementById('loading-overlay').classList.remove('active');
+  hideLoading();
 }
 
 function openTargets(){
@@ -1820,6 +3381,103 @@ function closeUnassigned(){
   Object.values(_unassignedExpandTimers).forEach(clearTimeout);
   _unassignedExpandTimers={};
 }
+
+// ── Pipeline Tiles ──
+const STAGE_LABELS={'not_contacted':'Not Contacted','contacted':'Contacted','quoted':'Quoted','submitted':'Submitted'};
+const STAGE_STATUS_CLS={'not_contacted':'lead-status-prospect','contacted':'lead-status-contacted','quoted':'lead-status-quoted','submitted':'lead-status-applied'};
+
+// Compute tile counts (team totals across all advisers)
+function computeTileCounts(){
+  const counts={not_contacted:0,contacted:0,quoted:0,submitted:0};
+  for(const uid in pipelineTiles){
+    const t=pipelineTiles[uid];
+    for(const stage in counts){
+      counts[stage]+=(t[stage]||[]).length;
+    }
+  }
+  return counts;
+}
+
+(function initTiles(){
+  const counts=computeTileCounts();
+  for(const stage in counts){
+    const el=document.getElementById('tile-'+stage.replace('_','-'));
+    if(el) el.textContent=counts[stage];
+  }
+})();
+
+// ── Pipeline tile → lead table filter ──
+function filterLeadTable(stage){
+  if(_wbLtPipelineStage===stage){
+    _wbLtPipelineStage=null;
+    _wbLtPipelineFilter=null;
+    document.querySelectorAll('.pipeline-tile').forEach(t=>t.classList.remove('active'));
+  } else {
+    _wbLtPipelineStage=stage;
+    const ids=new Set();
+    for(const uid in pipelineTiles){
+      (pipelineTiles[uid][stage]||[]).forEach(l=>ids.add(l.lead_id));
+    }
+    _wbLtPipelineFilter=ids;
+    document.querySelectorAll('.pipeline-tile').forEach(t=>t.classList.remove('active'));
+    const cls='.tile-'+stage.replace('_','-');
+    document.querySelector(cls)?.classList.add('active');
+  }
+  document.getElementById('wb-lt-status').value='all';
+  wbLtRender();
+  document.getElementById('wb-w-lead-table')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── Calls Detail slider ──
+function openCallsSlider(leadId, clientName){
+  const calls=pipelineCallDetails[leadId]||pipelineCallDetails[String(leadId)]||[];
+  document.getElementById('calls-panel-title').textContent='Calls — '+clientName;
+  document.getElementById('calls-panel-sub').textContent=calls.length+' call'+(calls.length!==1?'s':'');
+  const body=document.getElementById('calls-panel-body');
+  if(!calls.length){
+    body.innerHTML='<div class="remed-empty">No calls found for this lead.</div>';
+  } else {
+    body.innerHTML=calls.map(c=>{
+      const durMins=Math.floor(c.duration_secs/60);
+      const durSecs=Math.round(c.duration_secs%60);
+      const durFmt=durMins>0?`${durMins}m ${durSecs}s`:`${durSecs}s`;
+      const is45=c.duration_secs>=45;
+      const url=`${CRM_BASE}/leads/${c.lead_id}/`;
+      return `<a class="remed-card" href="${url}" target="_blank" style="text-decoration:none;color:inherit">
+        <div class="remed-card-top">
+          <div class="remed-card-client" style="font-size:13px">${c.call_time||'Unknown time'}</div>
+          <div class="remed-card-date-wrap">
+            <span class="beacon ${is45?'beacon-green':'beacon-red'}"></span>
+            <span class="remed-card-date">${durFmt}</span>
+          </div>
+        </div>
+        <div class="remed-card-field">
+          <div class="remed-card-label">Duration</div>
+          <div class="remed-card-value">${durFmt} ${is45?'<span style="color:#059669;font-size:11px;font-weight:600">(45s+)</span>':'<span style="color:#dc2626;font-size:11px;font-weight:600">(&lt;45s)</span>'}</div>
+        </div>
+      </a>`;
+    }).join('');
+  }
+  document.getElementById('calls-backdrop').classList.add('open');
+  document.getElementById('calls-panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeCallsSlider(){
+  document.getElementById('calls-backdrop').classList.remove('open');
+  document.getElementById('calls-panel').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+// Delegate click on calls links (lead table + anywhere)
+document.addEventListener('click',function(e){
+  const link=e.target.closest('.wb-calls-link');
+  if(link){
+    e.preventDefault();
+    e.stopPropagation();
+    openCallsSlider(parseInt(link.dataset.leadId), link.dataset.client||'');
+  }
+});
 
 function resetTargets(){
   T={...DEFAULTS};
