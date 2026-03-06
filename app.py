@@ -92,6 +92,12 @@ REMED_TYPE_IDS_SQL = "138,139,140,141,142,143,144,145,162,163,164,165,189,197"
 AVATAR_COLORS = {181:"#6366f1",182:"#ec4899",152:"#f59e0b",183:"#10b981",53:"#3b82f6"}
 AVATAR_FILES  = {181:"Nataniel.jpeg",182:"Sam.jpeg",152:"Rebel.jpeg",183:"Gary.jpeg",53:""}
 
+# Exclude test / dummy leads from all analytics — applied to every leads_lead query
+# Uses the table alias expected by each query (l. or bare leads_lead.)
+_EXCL_TEST = """AND LOWER(CONCAT({pfx}first_name,' ',{pfx}last_name)) NOT REGEXP '(test|dummy)'"""
+EXCL_TEST      = _EXCL_TEST.format(pfx="l.")        # for queries using alias "l"
+EXCL_TEST_BARE = _EXCL_TEST.format(pfx="")           # for queries using bare table name
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _utc_range(start, end):
@@ -236,8 +242,10 @@ def get_pipeline_stats(cursor, start, end):
     # 1. Assigned
     cursor.execute("""
         SELECT user_id, COUNT(*) AS assigned FROM leads_lead
-        WHERE assigned >= %s AND assigned < %s GROUP BY user_id
-    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
+        WHERE assigned >= %s AND assigned < %s
+          {EXCL_TEST_BARE}
+        GROUP BY user_id
+    """.format(EXCL_TEST_BARE=EXCL_TEST_BARE), (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     assigned = {r["user_id"]: int(r["assigned"]) for r in cursor.fetchall()}
 
     # 2. Contacted = calls >= 5 seconds duration
@@ -279,8 +287,9 @@ def get_pipeline_stats(cursor, start, end):
               AND la.action_type='doccreate'
               AND la.note LIKE '%%Life Insurance Questions%%'
           )
+          {EXCL_TEST}
         GROUP BY l.user_id
-    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
+    """.format(EXCL_TEST=EXCL_TEST), (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     booked = {r["user_id"]: int(r["booked"]) for r in cursor.fetchall()}
 
     # 4. Called = total calls >= 5s (for daily checks tab)
@@ -447,8 +456,9 @@ def get_hourly_pipeline_series(cursor, day):
         SELECT user_id, HOUR(assigned) AS hr, COUNT(*) AS cnt
         FROM leads_lead
         WHERE assigned >= %s AND assigned < %s
+          {EXCL_TEST_BARE}
         GROUP BY user_id, HOUR(assigned)
-    """, (day_iso, next_day_iso))
+    """.format(EXCL_TEST_BARE=EXCL_TEST_BARE), (day_iso, next_day_iso))
     assigned_h = defaultdict(lambda: defaultdict(int))
     for r in cursor.fetchall(): assigned_h[r["user_id"]][int(r["hr"])] = int(r["cnt"])
 
@@ -573,8 +583,9 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
         SELECT user_id, DATE(assigned) AS dt, COUNT(*) AS cnt
         FROM leads_lead
         WHERE assigned >= %s AND assigned < %s AND DAYOFWEEK(assigned) NOT IN (1,7)
+          {EXCL_TEST_BARE}
         GROUP BY user_id, DATE(assigned)
-    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
+    """.format(EXCL_TEST_BARE=EXCL_TEST_BARE), (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     assigned_d = defaultdict(lambda: defaultdict(int))
     for r in cursor.fetchall(): assigned_d[r["user_id"]][str(r["dt"])[:10]]=int(r["cnt"])
 
@@ -621,8 +632,9 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
               AND la.action_type='doccreate'
               AND la.note LIKE '%%Life Insurance Questions%%'
           )
+          {EXCL_TEST}
         GROUP BY l.user_id, DATE(l.assigned)
-    """, (start.isoformat(), (end + timedelta(days=1)).isoformat()))
+    """.format(EXCL_TEST=EXCL_TEST), (start.isoformat(), (end + timedelta(days=1)).isoformat()))
     booked_d = defaultdict(lambda: defaultdict(int))
     for r in cursor.fetchall(): booked_d[r["user_id"]][str(r["dt"])[:10]]=int(r["cnt"])
 
@@ -644,6 +656,7 @@ def get_remediation_stats(cursor, start, end):
           AND l.user_id IN ({_USER_IDS_SQL})
           AND lr.created >= {utc_start}
           AND lr.created <  {utc_end}
+          {EXCL_TEST}
         GROUP BY l.user_id
     """)
     counts = {}
@@ -673,6 +686,7 @@ def get_remediation_stats(cursor, start, end):
           AND l.user_id IN ({_USER_IDS_SQL})
           AND lr.created >= {utc_start}
           AND lr.created <  {utc_end}
+          {EXCL_TEST}
         ORDER BY lr.created ASC
     """)
     details = defaultdict(list)
@@ -714,8 +728,13 @@ def get_assigned_lead_details(cursor, start, end):
                l.user_id     AS adviser_id,
                CONCAT(l.first_name,' ',l.last_name) AS client_name,
                l.status,
-               l.source_code,
-               DATE(l.assigned)                      AS assigned_date,
+               COALESCE(NULLIF(l.source_code,''), ls.name, NULLIF(l.groups_cache,''), '') AS source_name,
+               COALESCE(NULLIF(l.source_refer,''),
+                        l.datafields->>'$.affiliate_user', '') AS referrer_name,
+               DATE(l.created)                        AS created_date,
+               l.created                               AS created_at,
+               DATE(l.assigned)                        AS assigned_date,
+               l.assigned                              AS assigned_at,
                (SELECT LEFT(la.note, 500) FROM leads_leadaction la
                 WHERE la.object_id = l.id AND la.object_type = 'lead'
                   AND la.action_type = 'note' AND la.user_id IS NOT NULL
@@ -723,12 +742,43 @@ def get_assigned_lead_details(cursor, start, end):
                (SELECT LEFT(la.note, 500) FROM leads_leadaction la
                 WHERE la.object_id = l.id AND la.object_type = 'lead'
                   AND (la.action_type != 'note' OR la.user_id IS NULL)
-                ORDER BY la.created DESC LIMIT 1) AS system_note
+                ORDER BY la.created DESC LIMIT 1) AS system_note,
+               CASE WHEN l.status IN (5,6) THEN
+                 COALESCE(
+                   (SELECT
+                      CASE
+                        WHEN la_ps.note LIKE '%%Application%%' OR la_ps.note LIKE '%%Documents%%' THEN 4
+                        WHEN la_ps.note LIKE '%%Quote%%' THEN 3
+                        ELSE 1
+                      END
+                    FROM leads_leadaction la_ps
+                    WHERE la_ps.object_id = l.id
+                      AND la_ps.object_type = 'lead'
+                      AND la_ps.action_type = 'status'
+                      AND la_ps.note NOT LIKE '%%Client%%'
+                      AND la_ps.note NOT LIKE '%%On Hold%%'
+                      AND la_ps.note NOT LIKE '%%Not Interested%%'
+                    ORDER BY la_ps.created DESC
+                    LIMIT 1
+                   ), 0)
+               ELSE l.status
+               END AS working_stage,
+               COALESCE(
+                 (SELECT la_co.action_type = 'close'
+                  FROM leads_leadaction la_co
+                  WHERE la_co.object_id = l.id
+                    AND la_co.object_type = 'lead'
+                    AND la_co.action_type IN ('close','open')
+                  ORDER BY la_co.created DESC
+                  LIMIT 1
+                 ), 0) AS is_closed
         FROM leads_lead l
+        LEFT JOIN leads_leadsource ls ON ls.id = l.source_id
         WHERE l.assigned >= %s AND l.assigned < %s
           AND l.user_id IN ({uids})
+          {excl}
         ORDER BY l.assigned ASC
-    """.format(uids=_USER_IDS_SQL),
+    """.format(uids=_USER_IDS_SQL, excl=EXCL_TEST),
         (start.isoformat(), (end + timedelta(days=1)).isoformat()),
     )
     details = defaultdict(list)
@@ -737,12 +787,240 @@ def get_assigned_lead_details(cursor, start, end):
             "lead_id": r["lead_id"],
             "client_name": (r["client_name"] or "").strip(),
             "status": int(r["status"]),
-            "source": (r["source_code"] or "").strip(),
+            "source": (r["source_name"] or "").strip(),
+            "referrer": (r["referrer_name"] or "").strip(),
+            "created_date": str(r["created_date"]) if r["created_date"] else "",
+            "created_at": str(r["created_at"]) if r["created_at"] else "",
             "assigned_date": str(r["assigned_date"]),
+            "assigned_at": str(r["assigned_at"]) if r["assigned_at"] else "",
             "user_note": (r["user_note"] or "").strip(),
             "system_note": (r["system_note"] or "").strip(),
+            "working_stage": int(r["working_stage"]) if r["working_stage"] is not None else int(r["status"]),
+            "is_closed": bool(r["is_closed"]),
         })
     return dict(details)
+
+
+def get_total_activity_lead_details(cursor, start, end):
+    """All leads an adviser touched during the period — regardless of assignment date.
+
+    A lead is included if it was assigned during the period OR had any
+    leads_leadaction activity during the period.  This gives a full workload
+    view rather than the cohort/funnel view.
+    """
+    cursor.execute("""
+        SELECT DISTINCT l.id          AS lead_id,
+               l.user_id     AS adviser_id,
+               CONCAT(l.first_name,' ',l.last_name) AS client_name,
+               l.status,
+               COALESCE(NULLIF(l.source_code,''), ls.name, NULLIF(l.groups_cache,''), '') AS source_name,
+               COALESCE(NULLIF(l.source_refer,''),
+                        l.datafields->>'$.affiliate_user', '') AS referrer_name,
+               DATE(l.created)                        AS created_date,
+               l.created                               AS created_at,
+               DATE(l.assigned)                        AS assigned_date,
+               l.assigned                              AS assigned_at,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND la.action_type = 'note' AND la.user_id IS NOT NULL
+                ORDER BY la.created DESC LIMIT 1) AS user_note,
+               (SELECT LEFT(la.note, 500) FROM leads_leadaction la
+                WHERE la.object_id = l.id AND la.object_type = 'lead'
+                  AND (la.action_type != 'note' OR la.user_id IS NULL)
+                ORDER BY la.created DESC LIMIT 1) AS system_note,
+               CASE WHEN l.status IN (5,6) THEN
+                 COALESCE(
+                   (SELECT
+                      CASE
+                        WHEN la_ps.note LIKE '%%Application%%' OR la_ps.note LIKE '%%Documents%%' THEN 4
+                        WHEN la_ps.note LIKE '%%Quote%%' THEN 3
+                        ELSE 1
+                      END
+                    FROM leads_leadaction la_ps
+                    WHERE la_ps.object_id = l.id
+                      AND la_ps.object_type = 'lead'
+                      AND la_ps.action_type = 'status'
+                      AND la_ps.note NOT LIKE '%%Client%%'
+                      AND la_ps.note NOT LIKE '%%On Hold%%'
+                      AND la_ps.note NOT LIKE '%%Not Interested%%'
+                    ORDER BY la_ps.created DESC
+                    LIMIT 1
+                   ), 0)
+               ELSE l.status
+               END AS working_stage,
+               COALESCE(
+                 (SELECT la_co.action_type = 'close'
+                  FROM leads_leadaction la_co
+                  WHERE la_co.object_id = l.id
+                    AND la_co.object_type = 'lead'
+                    AND la_co.action_type IN ('close','open')
+                  ORDER BY la_co.created DESC
+                  LIMIT 1
+                 ), 0) AS is_closed
+        FROM leads_lead l
+        LEFT JOIN leads_leadsource ls ON ls.id = l.source_id
+        WHERE l.user_id IN ({uids})
+          AND (
+            (l.assigned >= %s AND l.assigned < %s)
+            OR EXISTS (
+              SELECT 1 FROM leads_leadaction la
+              WHERE la.object_id = l.id AND la.object_type = 'lead'
+                AND la.created >= %s AND la.created < %s
+            )
+          )
+          {excl}
+        ORDER BY l.assigned ASC
+    """.format(uids=_USER_IDS_SQL, excl=EXCL_TEST),
+        (start.isoformat(), (end + timedelta(days=1)).isoformat(),
+         start.isoformat(), (end + timedelta(days=1)).isoformat()),
+    )
+    details = defaultdict(list)
+    for r in cursor.fetchall():
+        details[r["adviser_id"]].append({
+            "lead_id": r["lead_id"],
+            "client_name": (r["client_name"] or "").strip(),
+            "status": int(r["status"]),
+            "source": (r["source_name"] or "").strip(),
+            "referrer": (r["referrer_name"] or "").strip(),
+            "created_date": str(r["created_date"]) if r["created_date"] else "",
+            "created_at": str(r["created_at"]) if r["created_at"] else "",
+            "assigned_date": str(r["assigned_date"]),
+            "assigned_at": str(r["assigned_at"]) if r["assigned_at"] else "",
+            "user_note": (r["user_note"] or "").strip(),
+            "system_note": (r["system_note"] or "").strip(),
+            "working_stage": int(r["working_stage"]) if r["working_stage"] is not None else int(r["status"]),
+            "is_closed": bool(r["is_closed"]),
+        })
+    return dict(details)
+
+
+def get_pipeline_tile_data(cursor, start, end):
+    """Pipeline tile data: leads classified into 4 stages with per-lead call counts.
+
+    Stages (hierarchical — highest wins):
+      submitted: status 4 (Applied)
+      quoted:    status 3 (Quoted) or has a quote record
+      contacted: has at least one 45s+ call from assigned adviser
+      not_contacted: none of the above
+
+    Also returns call details per lead for the calls slider.
+    """
+    # 1. Get all assigned leads
+    cursor.execute("""
+        SELECT l.id          AS lead_id,
+               l.user_id     AS adviser_id,
+               CONCAT(l.first_name,' ',l.last_name) AS client_name,
+               l.status,
+               l.phone,
+               l.source_code,
+               DATE(l.assigned) AS assigned_date
+        FROM leads_lead l
+        WHERE l.assigned >= %s AND l.assigned < %s
+          AND l.user_id IN ({uids})
+        ORDER BY l.assigned ASC
+    """.format(uids=_USER_IDS_SQL),
+        (start.isoformat(), (end + timedelta(days=1)).isoformat()),
+    )
+    leads = []
+    lead_phones = {}  # lead_id -> phone
+    lead_advisers = {}  # lead_id -> adviser_id
+    for r in cursor.fetchall():
+        lead = {
+            "lead_id": r["lead_id"],
+            "adviser_id": r["adviser_id"],
+            "client_name": (r["client_name"] or "").strip(),
+            "status": int(r["status"]),
+            "phone": (r["phone"] or "").strip(),
+            "source": (r["source_code"] or "").strip(),
+            "assigned_date": str(r["assigned_date"]),
+        }
+        leads.append(lead)
+        if lead["phone"]:
+            lead_phones[r["lead_id"]] = lead["phone"]
+            lead_advisers[r["lead_id"]] = r["adviser_id"]
+
+    if not leads:
+        return {}, {}, {}
+
+    # 2. Get 45s+ call counts per lead per adviser (matching phone + extension)
+    #    Also get ALL call details for the calls slider
+    phone_to_leads = defaultdict(list)
+    for lid, phone in lead_phones.items():
+        clean = phone.replace(" ", "").replace("-", "")
+        phone_to_leads[clean].append(lid)
+
+    # Build call count and detail data
+    call_counts = defaultdict(int)    # lead_id -> count of 45s+ calls
+    call_details = defaultdict(list)  # lead_id -> list of call records
+
+    if phone_to_leads:
+        phones_sql = ",".join(f"'{p}'" for p in phone_to_leads.keys())
+        cursor.execute(f"""
+            SELECT ncr.id          AS call_id,
+                   REPLACE(REPLACE(ncr.phone, ' ', ''), '-', '') AS clean_phone,
+                   ncr.extension,
+                   ncr.duration,
+                   ncr.duration / 1000000 AS duration_secs,
+                   CONVERT_TZ(ncr.created, '+00:00', '{TZ_OFFSET}') AS call_time,
+                   up.user_id      AS caller_id
+            FROM noojee_callrecord ncr
+            JOIN account_userprofile up ON up.extension = ncr.extension
+            WHERE REPLACE(REPLACE(ncr.phone, ' ', ''), '-', '') IN ({phones_sql})
+              AND ncr.status = 'Hungup'
+              AND up.user_id IN ({_USER_IDS_SQL})
+            ORDER BY ncr.created DESC
+        """)
+        for r in cursor.fetchall():
+            clean_phone = r["clean_phone"]
+            caller_id = r["caller_id"]
+            dur_secs = float(r["duration_secs"] or 0)
+            for lid in phone_to_leads.get(clean_phone, []):
+                # Only count calls from the assigned adviser
+                if lead_advisers.get(lid) != caller_id:
+                    continue
+                call_detail = {
+                    "call_id": r["call_id"],
+                    "duration_secs": round(dur_secs, 1),
+                    "call_time": str(r["call_time"])[:19] if r["call_time"] else "",
+                    "lead_id": lid,
+                }
+                call_details[lid].append(call_detail)
+                if r["duration"] and r["duration"] >= CONTACT_THRESHOLD_US:
+                    call_counts[lid] += 1
+
+    # 3. Classify leads into 4 stages
+    # Stages: not_contacted, contacted, quoted, submitted
+    tiles = defaultdict(lambda: {"not_contacted": [], "contacted": [], "quoted": [], "submitted": []})
+
+    for lead in leads:
+        lid = lead["lead_id"]
+        uid = lead["adviser_id"]
+        status = lead["status"]
+        has_contact_call = call_counts.get(lid, 0) > 0
+
+        lead_data = {
+            "lead_id": lead["lead_id"],
+            "adviser_id": lead["adviser_id"],
+            "client_name": lead["client_name"],
+            "status": lead["status"],
+            "source": lead["source"],
+            "assigned_date": lead["assigned_date"],
+            "calls_attempted": call_counts.get(lid, 0),
+            "total_calls": len(call_details.get(lid, [])),
+        }
+
+        if status == 4:
+            stage = "submitted"
+        elif status == 3:
+            stage = "quoted"
+        elif has_contact_call or status in (1, 2):
+            stage = "contacted"
+        else:
+            stage = "not_contacted"
+
+        tiles[uid][stage].append(lead_data)
+
+    return dict(tiles), dict(call_counts), dict(call_details)
 
 
 def get_contact_before_close(cursor, start, end):
@@ -768,6 +1046,7 @@ def get_contact_before_close(cursor, start, end):
             WHERE l.user_id IN ({_USER_IDS_SQL})
               AND l.status IN (5, 6)
               AND l.assigned >= %s AND l.assigned < %s
+              {EXCL_TEST}
             GROUP BY l.user_id, l.id
         ) sub
         GROUP BY sub.user_id
@@ -799,6 +1078,7 @@ def get_unassigned_leads(cursor):
                l.status,
                l.source_code,
                DATE(l.assigned) AS assigned_date,
+               l.assigned       AS assigned_at,
                (SELECT LEFT(la.note, 500) FROM leads_leadaction la
                 WHERE la.object_id = l.id AND la.object_type = 'lead'
                   AND la.action_type = 'note' AND la.user_id IS NOT NULL
@@ -816,6 +1096,7 @@ def get_unassigned_leads(cursor):
           AND LOWER(TRIM(l.last_name))  NOT IN ({_TEST_NAMES_SQL})
           AND TRIM(l.first_name) != ''
           AND TRIM(l.last_name)  != ''
+          {EXCL_TEST}
         ORDER BY l.assigned ASC
     """)
     leads = []
@@ -826,6 +1107,7 @@ def get_unassigned_leads(cursor):
             "status": int(r["status"]),
             "source": (r["source_code"] or "").strip(),
             "assigned_date": str(r["assigned_date"]),
+            "assigned_at": str(r["assigned_at"]) if r["assigned_at"] else "",
             "user_note": (r["user_note"] or "").strip(),
             "system_note": (r["system_note"] or "").strip(),
         })
@@ -894,6 +1176,9 @@ def index():
     start_str        = request.args.get("start", default_start.isoformat())
     end_str          = request.args.get("end",   default_end.isoformat())
     active_tab       = request.args.get("tab","perf")
+    wb_mode          = request.args.get("mode","funnel")
+    if wb_mode not in ("funnel","activity"):
+        wb_mode = "funnel"
 
     try:
         start=date.fromisoformat(start_str); end=date.fromisoformat(end_str)
@@ -939,10 +1224,19 @@ def index():
         appt_today, appt_future = _timed("appointments", get_schedule_appointments, cursor, today)
         remed_counts, remed_details = _timed("remediations", get_remediation_stats, cursor, start, end)
         assigned_details = _timed("assigned_details", get_assigned_lead_details, cursor, start, end)
+        activity_details = _timed("activity_details", get_total_activity_lead_details, cursor, start, end)
+        pipeline_tiles, pipeline_call_counts, pipeline_call_details = _timed("pipeline_tiles", get_pipeline_tile_data, cursor, start, end)
         cbc_counts = _timed("contact_before_close", get_contact_before_close, cursor, start, end)
         unassigned_leads = _timed("unassigned_leads", get_unassigned_leads, cursor)
     finally:
         cursor.close(); conn.close()
+
+    # In Total Activity mode, override assigned counts and use broader lead set
+    if wb_mode == "activity":
+        pipeline["assigned"] = {int(uid): len(leads) for uid, leads in activity_details.items()}
+        effective_details = activity_details
+    else:
+        effective_details = assigned_details
 
     # Determine chart axis mode
     if is_single_day:
@@ -1026,9 +1320,12 @@ def index():
     for adv in advisers:
         uid=adv["id"]; udata=daily_by_user.get(uid,{}); ucalls=calls_day.get(uid,{})
         ucont=contacted_d.get(uid,{})
+        _av_file=AVATAR_FILES.get(uid,"")
         series={
             "uid":uid,"name":adv["name"],
             "initials":(adv["first_name"][0]+adv["last_name"][0]).upper(),
+            "avatar_color":AVATAR_COLORS.get(uid,"#6b7280"),
+            "avatar_url":f"/static/avatars/{_av_file}" if _av_file else "",
             "talk_mins":[],"quotes_cnt":[],"apps_cnt":[],"apps_val":[],"inforce_val":[],"calls_cnt":[],
         }
         for d in dates_list:
@@ -1100,9 +1397,12 @@ def index():
         team_avgs=team_avgs,
         chart_mode=chart_mode,
         remed_details=remed_details,
-        assigned_details=assigned_details,
+        assigned_details=effective_details,
+        pipeline_tiles=pipeline_tiles,
+        pipeline_call_details=pipeline_call_details,
         lead_status=LEAD_STATUS,
         crm_base_url=CRM_BASE_URL,
+        wb_mode=wb_mode,
         unassigned_leads=unassigned_leads,
     )
 
