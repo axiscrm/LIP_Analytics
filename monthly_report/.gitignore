@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+.env.*
+venv/
+
+# Output artifacts
+output/
+*.pdf
+charts/
+
+# Generated config (contains live data)
+report_config.py
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Legacy / backup dirs
+backup/
+backup_reportlab/
+html_pipeline/
+html_version/
+templates/
+src/
+
+# Misc
+apply_grey.py
+polish_all.py
+polish_v2.py
+polish_v3.py
+wire_config.py
+test_generate.py
+test_section7_8.py
+test_section9_11.py
+test_build_config.py

@@ -1,14 +1,17 @@
 import os
+import sys
 import json
 import time
 import logging
+import sqlite3
 from datetime import date, datetime, timedelta
-from flask import Flask, render_template, request, Response, stream_with_context, session, redirect, url_for
+from flask import Flask, render_template, request, Response, stream_with_context, session, redirect, url_for, abort
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from db import get_connection
 from collections import defaultdict
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"), override=True)
 
 log = logging.getLogger("lip_analytics.app")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s %(message)s")
@@ -16,41 +19,283 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelna
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-me-in-production")
 GROUP_ID = int(os.environ.get("LIP_GROUP_ID", 56))
-DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 
-# Stamp changes every time the password is updated and the app restarts,
-# invalidating all sessions created with a previous password.
-_password_stamp = hash(DASHBOARD_PASSWORD) if DASHBOARD_PASSWORD else None
+# Master list of all possible adviser IDs (used by admin panel for checklist)
+SHOW_USER_IDS = {181, 182, 183, 152, 53}
+
+# ── Local auth database (SQLite) ──────────────────────────────────────────────
+AUTH_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "auth.db")
+
+def _auth_db():
+    """Return a SQLite connection for the local auth database."""
+    conn = sqlite3.connect(AUTH_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+def _ensure_db_tables():
+    """Create users and settings tables in local SQLite."""
+    conn = _auth_db()
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS lip_users (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            email       TEXT NOT NULL UNIQUE,
+            pw_hash     TEXT NOT NULL,
+            name        TEXT NOT NULL DEFAULT '',
+            role        TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user')),
+            adviser_ids TEXT DEFAULT NULL,
+            is_active   INTEGER NOT NULL DEFAULT 1,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS lip_user_settings (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL,
+            setting_key TEXT NOT NULL,
+            setting_val TEXT,
+            updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE (user_id, setting_key),
+            FOREIGN KEY (user_id) REFERENCES lip_users(id) ON DELETE CASCADE
+        );
+    """)
+    conn.close()
+
+def _ensure_admin_user():
+    """Seed initial admin user from env vars if no admin exists."""
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    admin_pw = os.environ.get("ADMIN_PASSWORD", "").strip()
+    if not admin_email or not admin_pw:
+        return
+    conn = _auth_db()
+    row = conn.execute("SELECT id FROM lip_users WHERE role='admin' LIMIT 1").fetchone()
+    if row:
+        conn.close()
+        return
+    conn.execute(
+        "INSERT INTO lip_users (email, pw_hash, role, name, adviser_ids) VALUES (?,?,'admin',?,?)",
+        (admin_email, generate_password_hash(admin_pw),
+         admin_email.split('@')[0].title(),
+         ",".join(str(u) for u in sorted(SHOW_USER_IDS)))
+    )
+    conn.commit()
+    conn.close()
+
+try:
+    _ensure_db_tables()
+    _ensure_admin_user()
+except Exception as _e:
+    log.warning("Auth DB bootstrap failed: %s", _e)
+
+# ── Authentication ────────────────────────────────────────────────────────────
 
 def login_required(f):
     """Decorator — redirects to /login if not authenticated."""
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not DASHBOARD_PASSWORD:
-            return f(*args, **kwargs)
-        if session.get("authenticated") and session.get("pw_stamp") == _password_stamp:
+        if session.get("authenticated") and session.get("user_id"):
             return f(*args, **kwargs)
         session.clear()
         return redirect(url_for("login", next=request.url))
+    return decorated
+
+def admin_required(f):
+    """Decorator — requires admin role."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("authenticated") or not session.get("user_id"):
+            return redirect(url_for("login", next=request.url))
+        if session.get("user_role") != "admin":
+            abort(403)
+        return f(*args, **kwargs)
     return decorated
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
     if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
         pw = request.form.get("password", "")
-        if pw and pw == DASHBOARD_PASSWORD:
-            session["authenticated"] = True
-            session["pw_stamp"] = _password_stamp
-            return redirect(request.args.get("next") or url_for("index"))
-        error = "Incorrect password."
+        if email and pw:
+            conn = _auth_db()
+            user = conn.execute(
+                "SELECT id, email, pw_hash, role, name, adviser_ids "
+                "FROM lip_users WHERE email=? AND is_active=1",
+                (email,)
+            ).fetchone()
+            conn.close()
+            if user and check_password_hash(user["pw_hash"], pw):
+                session["authenticated"] = True
+                session["user_id"] = user["id"]
+                session["user_email"] = user["email"]
+                session["user_role"] = user["role"]
+                session["user_name"] = user["name"]
+                # Parse adviser IDs into a set of ints
+                aids = set()
+                if user["adviser_ids"]:
+                    for x in user["adviser_ids"].split(","):
+                        x = x.strip()
+                        if x.isdigit():
+                            aids.add(int(x))
+                session["user_adviser_ids"] = sorted(aids)
+                return redirect(request.args.get("next") or url_for("index"))
+        error = "Invalid email or password."
     return render_template("login.html", error=error)
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+# ── Per-user settings API ─────────────────────────────────────────────────────
+
+@app.route("/api/user/settings", methods=["GET"])
+@login_required
+def api_user_settings_get():
+    """Return all settings for the logged-in user as a JSON dict."""
+    from flask import jsonify
+    uid = session["user_id"]
+    conn = _auth_db()
+    rows = conn.execute("SELECT setting_key, setting_val FROM lip_user_settings WHERE user_id=?", (uid,)).fetchall()
+    conn.close()
+    result = {}
+    for r in rows:
+        try:
+            result[r["setting_key"]] = json.loads(r["setting_val"])
+        except (json.JSONDecodeError, TypeError):
+            result[r["setting_key"]] = r["setting_val"]
+    return jsonify(result)
+
+@app.route("/api/user/settings", methods=["POST"])
+@login_required
+def api_user_settings_post():
+    """Upsert a single setting for the logged-in user."""
+    from flask import jsonify
+    uid = session["user_id"]
+    data = request.get_json(force=True) or {}
+    key = data.get("key", "").strip()
+    value = data.get("value")
+    if not key:
+        return jsonify({"ok": False, "error": "key required"}), 400
+    val_str = json.dumps(value) if not isinstance(value, str) else value
+    conn = _auth_db()
+    conn.execute(
+        "INSERT INTO lip_user_settings (user_id, setting_key, setting_val) "
+        "VALUES (?, ?, ?) "
+        "ON CONFLICT(user_id, setting_key) DO UPDATE SET setting_val=excluded.setting_val",
+        (uid, key, val_str)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+# ── Admin panel ───────────────────────────────────────────────────────────────
+
+@app.route("/admin")
+@admin_required
+def admin_panel():
+    """Render admin user-management panel."""
+    conn = _auth_db()
+    users = [dict(r) for r in conn.execute("SELECT id, email, name, role, adviser_ids, is_active, created_at FROM lip_users ORDER BY name").fetchall()]
+    conn.close()
+    # Get adviser names from CRM DB
+    crm = get_connection()
+    cur = crm.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            SELECT u.id, CONCAT(u.first_name,' ',u.last_name) AS name
+            FROM auth_user u
+            JOIN account_usergroup_users ugu ON u.id=ugu.user_id
+            WHERE ugu.usergroup_id=%s ORDER BY u.last_name, u.first_name
+        """, (GROUP_ID,))
+        all_advisers = [{"id": r["id"], "name": r["name"].strip()} for r in cur.fetchall() if r["id"] in SHOW_USER_IDS]
+    finally:
+        cur.close()
+        crm.close()
+    return render_template("admin.html", users=users, all_advisers=all_advisers)
+
+@app.route("/admin/users", methods=["POST"])
+@admin_required
+def admin_create_user():
+    """Create a new user."""
+    from flask import jsonify
+    data = request.get_json(force=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    password = (data.get("password") or "").strip()
+    name = (data.get("name") or "").strip()
+    role = data.get("role", "user")
+    adviser_ids = data.get("adviser_ids", "")
+    if not email or not password:
+        return jsonify({"ok": False, "error": "Email and password required"}), 400
+    if role not in ("admin", "user"):
+        role = "user"
+    conn = _auth_db()
+    existing = conn.execute("SELECT id FROM lip_users WHERE email=?", (email,)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({"ok": False, "error": "Email already exists"}), 409
+    cur = conn.execute(
+        "INSERT INTO lip_users (email, pw_hash, name, role, adviser_ids) VALUES (?,?,?,?,?)",
+        (email, generate_password_hash(password), name, role, adviser_ids)
+    )
+    conn.commit()
+    new_id = cur.lastrowid
+    conn.close()
+    return jsonify({"ok": True, "user": {"id": new_id, "email": email, "name": name, "role": role, "adviser_ids": adviser_ids, "is_active": 1}})
+
+@app.route("/admin/users/<int:uid>", methods=["PUT"])
+@admin_required
+def admin_update_user(uid):
+    """Update user details (name, role, adviser_ids, is_active)."""
+    from flask import jsonify
+    data = request.get_json(force=True) or {}
+    fields, vals = [], []
+    if "name" in data:
+        fields.append("name=?"); vals.append(data["name"])
+    if "role" in data and data["role"] in ("admin", "user"):
+        fields.append("role=?"); vals.append(data["role"])
+    if "adviser_ids" in data:
+        fields.append("adviser_ids=?"); vals.append(data["adviser_ids"])
+    if "is_active" in data:
+        fields.append("is_active=?"); vals.append(1 if data["is_active"] else 0)
+    if not fields:
+        return jsonify({"ok": False, "error": "Nothing to update"}), 400
+    vals.append(uid)
+    conn = _auth_db()
+    conn.execute(f"UPDATE lip_users SET {','.join(fields)} WHERE id=?", tuple(vals))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+@app.route("/admin/users/<int:uid>", methods=["DELETE"])
+@admin_required
+def admin_delete_user(uid):
+    """Delete a user (cannot delete self)."""
+    from flask import jsonify
+    if uid == session.get("user_id"):
+        return jsonify({"ok": False, "error": "Cannot delete yourself"}), 400
+    conn = _auth_db()
+    conn.execute("DELETE FROM lip_users WHERE id=?", (uid,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+@app.route("/admin/users/<int:uid>/reset-password", methods=["POST"])
+@admin_required
+def admin_reset_password(uid):
+    """Set a new password for a user."""
+    from flask import jsonify
+    data = request.get_json(force=True) or {}
+    password = (data.get("password") or "").strip()
+    if not password:
+        return jsonify({"ok": False, "error": "Password required"}), 400
+    conn = _auth_db()
+    conn.execute("UPDATE lip_users SET pw_hash=? WHERE id=?", (generate_password_hash(password), uid))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
 
 # ── Persistent settings (targets & thresholds) ───────────────────────────────
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
@@ -80,11 +325,19 @@ def post_settings():
     save_settings(data)
     return jsonify({"ok": True})
 
-SHOW_USER_IDS = {181, 182, 183, 152, 53}
 MIN_DATE = "2025-01-01"
 TZ_OFFSET = "+11:00"   # AEDT — single place to change if needed
 CONTACT_THRESHOLD_US = 45_000_000  # 45 seconds in microseconds
-_USER_IDS_SQL = ",".join(str(u) for u in sorted(SHOW_USER_IDS))
+
+def get_user_ids():
+    """Return the set of adviser IDs visible to the current user."""
+    ids = session.get("user_adviser_ids", [])
+    return set(ids) if ids else set()
+
+def get_user_ids_sql():
+    """Return comma-separated adviser IDs for SQL IN clause."""
+    ids = get_user_ids()
+    return ",".join(str(i) for i in sorted(ids)) if ids else "0"
 
 CRM_BASE_URL = "https://crm.slife.com.au"
 REMED_TYPE_IDS_SQL = "138,139,140,141,142,143,144,145,162,163,164,165,189,197"
@@ -155,6 +408,7 @@ def color_inforce(monthly):
     return "red"
 
 def get_advisers(cursor):
+    user_ids = get_user_ids()
     cursor.execute("""
         SELECT u.id, CONCAT(u.first_name,' ',u.last_name) AS name,
                u.first_name, u.last_name
@@ -164,7 +418,7 @@ def get_advisers(cursor):
     """, (GROUP_ID,))
     return [{"id":r["id"],"name":r["name"].strip(),
              "first_name":r["first_name"],"last_name":r["last_name"]}
-            for r in cursor.fetchall() if r["id"] in SHOW_USER_IDS]
+            for r in cursor.fetchall() if r["id"] in user_ids]
 
 def get_performance_stats(cursor, start, end):
     utc_start, utc_end = _utc_range(start, end)
@@ -175,7 +429,7 @@ def get_performance_stats(cursor, start, end):
                COALESCE(SUM(ncr.duration),0)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
           AND ncr.created >= {utc_start}
@@ -197,7 +451,7 @@ def get_performance_stats(cursor, start, end):
                SUM(app_com_value) AS inforce_value,
                SUM(CASE WHEN (contact>0 OR qut_add>0 OR app_add>0) THEN 1 ELSE 0 END) AS days_worked
         FROM reports_userstats
-        WHERE user_id IN ({_USER_IDS_SQL})
+        WHERE user_id IN ({get_user_ids_sql()})
           AND date BETWEEN %s AND %s
         GROUP BY user_id
     """, (start.isoformat(), end.isoformat()))
@@ -253,7 +507,7 @@ def get_pipeline_stats(cursor, start, end):
         SELECT up.user_id, COUNT(*) AS contacted
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
@@ -267,7 +521,7 @@ def get_pipeline_stats(cursor, start, end):
         SELECT up.user_id, COUNT(*) AS no_contact
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.duration < {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
@@ -349,7 +603,7 @@ def get_hourly_series(cursor, day):
                SUM(ncr.duration)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
           AND ncr.created >= {utc_start}
@@ -387,7 +641,7 @@ def get_hourly_series(cursor, day):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
@@ -468,7 +722,7 @@ def get_hourly_pipeline_series(cursor, day):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
@@ -484,7 +738,7 @@ def get_hourly_pipeline_series(cursor, day):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.duration < {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
@@ -516,7 +770,7 @@ def get_daily_series(cursor, start, end):
                app_add AS apps_count, app_add_value AS apps_value,
                app_com AS inforce_count, app_com_value AS inforce_value
         FROM reports_userstats
-        WHERE user_id IN ({_USER_IDS_SQL})
+        WHERE user_id IN ({get_user_ids_sql()})
           AND date BETWEEN %s AND %s
           AND DAYOFWEEK(date) NOT IN (1,7)
         ORDER BY stat_date, user_id
@@ -542,7 +796,7 @@ def get_daily_series(cursor, start, end):
                SUM(ncr.duration)/1000000 AS talk_secs
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.status = 'Hungup'
           AND ncr.duration > 10000000
           AND ncr.created >= {utc_start}
@@ -564,7 +818,7 @@ def get_daily_series(cursor, start, end):
     cursor.execute(f"""
         SELECT DATE(date) AS dt, user_id, contact AS cnt
         FROM reports_userstats
-        WHERE user_id IN ({_USER_IDS_SQL})
+        WHERE user_id IN ({get_user_ids_sql()})
           AND date BETWEEN %s AND %s
           AND DAYOFWEEK(date) NOT IN (1,7)
     """, (start.isoformat(), end.isoformat()))
@@ -595,7 +849,7 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.duration >= {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
@@ -611,7 +865,7 @@ def get_daily_pipeline_series(cursor, start, end, dates_list):
                up.user_id, COUNT(*) AS cnt
         FROM noojee_callrecord ncr
         JOIN account_userprofile up ON up.extension = ncr.extension
-        WHERE up.user_id IN ({_USER_IDS_SQL})
+        WHERE up.user_id IN ({get_user_ids_sql()})
           AND ncr.duration < {CONTACT_THRESHOLD_US}
           AND ncr.status = 'Hungup'
           AND ncr.created >= {utc_start}
@@ -653,7 +907,7 @@ def get_remediation_stats(cursor, start, end):
         FROM leads_leadrequirement lr
         JOIN leads_lead l ON l.id = lr.lead_id
         WHERE lr.type_id IN ({REMED_TYPE_IDS_SQL})
-          AND l.user_id IN ({_USER_IDS_SQL})
+          AND l.user_id IN ({get_user_ids_sql()})
           AND lr.created >= {utc_start}
           AND lr.created <  {utc_end}
           {EXCL_TEST}
@@ -683,7 +937,7 @@ def get_remediation_stats(cursor, start, end):
         FROM leads_leadrequirement lr
         JOIN leads_lead l ON l.id = lr.lead_id
         WHERE lr.type_id IN ({REMED_TYPE_IDS_SQL})
-          AND l.user_id IN ({_USER_IDS_SQL})
+          AND l.user_id IN ({get_user_ids_sql()})
           AND lr.created >= {utc_start}
           AND lr.created <  {utc_end}
           {EXCL_TEST}
@@ -778,7 +1032,7 @@ def get_assigned_lead_details(cursor, start, end):
           AND l.user_id IN ({uids})
           {excl}
         ORDER BY l.assigned ASC
-    """.format(uids=_USER_IDS_SQL, excl=EXCL_TEST),
+    """.format(uids=get_user_ids_sql(), excl=EXCL_TEST),
         (start.isoformat(), (end + timedelta(days=1)).isoformat()),
     )
     details = defaultdict(list)
@@ -870,7 +1124,7 @@ def get_total_activity_lead_details(cursor, start, end):
           )
           {excl}
         ORDER BY l.assigned ASC
-    """.format(uids=_USER_IDS_SQL, excl=EXCL_TEST),
+    """.format(uids=get_user_ids_sql(), excl=EXCL_TEST),
         (start.isoformat(), (end + timedelta(days=1)).isoformat(),
          start.isoformat(), (end + timedelta(days=1)).isoformat()),
     )
@@ -911,6 +1165,26 @@ def get_pipeline_tile_data(cursor, start, end):
                l.user_id     AS adviser_id,
                CONCAT(l.first_name,' ',l.last_name) AS client_name,
                l.status,
+               CASE WHEN l.status IN (5,6) THEN
+                 COALESCE(
+                   (SELECT
+                      CASE
+                        WHEN la_ps.note LIKE '%%Application%%' OR la_ps.note LIKE '%%Documents%%' THEN 4
+                        WHEN la_ps.note LIKE '%%Quote%%' THEN 3
+                        ELSE 1
+                      END
+                    FROM leads_leadaction la_ps
+                    WHERE la_ps.object_id = l.id
+                      AND la_ps.object_type = 'lead'
+                      AND la_ps.action_type = 'status'
+                      AND la_ps.note NOT LIKE '%%Client%%'
+                      AND la_ps.note NOT LIKE '%%On Hold%%'
+                      AND la_ps.note NOT LIKE '%%Not Interested%%'
+                    ORDER BY la_ps.created DESC
+                    LIMIT 1
+                   ), 0)
+               ELSE l.status
+               END AS working_stage,
                l.phone,
                l.source_code,
                DATE(l.assigned) AS assigned_date
@@ -918,7 +1192,7 @@ def get_pipeline_tile_data(cursor, start, end):
         WHERE l.assigned >= %s AND l.assigned < %s
           AND l.user_id IN ({uids})
         ORDER BY l.assigned ASC
-    """.format(uids=_USER_IDS_SQL),
+    """.format(uids=get_user_ids_sql()),
         (start.isoformat(), (end + timedelta(days=1)).isoformat()),
     )
     leads = []
@@ -929,7 +1203,8 @@ def get_pipeline_tile_data(cursor, start, end):
             "lead_id": r["lead_id"],
             "adviser_id": r["adviser_id"],
             "client_name": (r["client_name"] or "").strip(),
-            "status": int(r["status"]),
+            "status": int(r["working_stage"]),
+            "real_status": int(r["status"]),
             "phone": (r["phone"] or "").strip(),
             "source": (r["source_code"] or "").strip(),
             "assigned_date": str(r["assigned_date"]),
@@ -946,8 +1221,9 @@ def get_pipeline_tile_data(cursor, start, end):
     #    Also get ALL call details for the calls slider
     phone_to_leads = defaultdict(list)
     for lid, phone in lead_phones.items():
-        clean = phone.replace(" ", "").replace("-", "")
-        phone_to_leads[clean].append(lid)
+        clean = ''.join(c for c in phone if c.isdigit())
+        if clean:
+            phone_to_leads[clean].append(lid)
 
     # Build call count and detail data
     call_counts = defaultdict(int)    # lead_id -> count of 45s+ calls
@@ -967,7 +1243,10 @@ def get_pipeline_tile_data(cursor, start, end):
             JOIN account_userprofile up ON up.extension = ncr.extension
             WHERE REPLACE(REPLACE(ncr.phone, ' ', ''), '-', '') IN ({phones_sql})
               AND ncr.status = 'Hungup'
-              AND up.user_id IN ({_USER_IDS_SQL})
+              AND up.user_id IN (
+                  SELECT aru.user_id FROM account_userrole_users aru
+                  WHERE aru.userrole_id = 2
+              )
             ORDER BY ncr.created DESC
         """)
         for r in cursor.fetchall():
@@ -975,9 +1254,6 @@ def get_pipeline_tile_data(cursor, start, end):
             caller_id = r["caller_id"]
             dur_secs = float(r["duration_secs"] or 0)
             for lid in phone_to_leads.get(clean_phone, []):
-                # Only count calls from the assigned adviser
-                if lead_advisers.get(lid) != caller_id:
-                    continue
                 call_detail = {
                     "call_id": r["call_id"],
                     "duration_secs": round(dur_secs, 1),
@@ -988,11 +1264,14 @@ def get_pipeline_tile_data(cursor, start, end):
                 if r["duration"] and r["duration"] >= CONTACT_THRESHOLD_US:
                     call_counts[lid] += 1
 
-    # 3. Classify leads into 4 stages
-    # Stages: not_contacted, contacted, quoted, submitted
-    tiles = defaultdict(lambda: {"not_contacted": [], "contacted": [], "quoted": [], "submitted": []})
+    # 3. Classify leads into 5 stages
+    # Stages: no_contact, attempted_contact, contacted, quoted, submitted
+    tiles = defaultdict(lambda: {"no_contact": [], "attempted_contact": [], "contacted": [], "quoted": [], "submitted": []})
 
     for lead in leads:
+        # Skip Won/Lost (Client) — they're beyond the pipeline
+        if lead.get("real_status", lead["status"]) >= 5:
+            continue
         lid = lead["lead_id"]
         uid = lead["adviser_id"]
         status = lead["status"]
@@ -1009,14 +1288,18 @@ def get_pipeline_tile_data(cursor, start, end):
             "total_calls": len(call_details.get(lid, [])),
         }
 
+        total_calls = len(call_details.get(lid, []))
+
         if status == 4:
             stage = "submitted"
         elif status == 3:
             stage = "quoted"
         elif has_contact_call or status in (1, 2):
             stage = "contacted"
+        elif total_calls > 0:
+            stage = "attempted_contact"
         else:
-            stage = "not_contacted"
+            stage = "no_contact"
 
         tiles[uid][stage].append(lead_data)
 
@@ -1043,7 +1326,7 @@ def get_contact_before_close(cursor, start, end):
                 AND ncr.phone = REPLACE(REPLACE(l.phone, ' ', ''), '-', '')
                 AND ncr.duration >= {CONTACT_THRESHOLD_US}
                 AND ncr.status = 'Hungup'
-            WHERE l.user_id IN ({_USER_IDS_SQL})
+            WHERE l.user_id IN ({get_user_ids_sql()})
               AND l.status IN (5, 6)
               AND l.assigned >= %s AND l.assigned < %s
               {EXCL_TEST}
@@ -1175,7 +1458,7 @@ def index():
 
     start_str        = request.args.get("start", default_start.isoformat())
     end_str          = request.args.get("end",   default_end.isoformat())
-    active_tab       = request.args.get("tab","perf")
+    active_tab       = "workbench"
     wb_mode          = request.args.get("mode","funnel")
     if wb_mode not in ("funnel","activity"):
         wb_mode = "funnel"
@@ -1369,12 +1652,13 @@ def index():
     team_avgs = {"talk_mins": round(avg_talk_s/60, 2), "talk_fmt": avg_talk_hm,
                  "qpd": round(avg_qpd, 2), "apd": round(avg_apd, 2)}
 
-    # Parse multi-select adviser param (default excludes Lucas 53)
+    # Parse multi-select adviser param (default: all user's advisers except Lucas 53)
+    user_ids = get_user_ids()
     selected_adviser_raw = request.args.get("adviser", "")
     if selected_adviser_raw:
         selected_advisers = [s.strip() for s in selected_adviser_raw.split(",") if s.strip()]
     else:
-        selected_advisers = [str(uid) for uid in sorted(SHOW_USER_IDS) if uid != 53]
+        selected_advisers = [str(uid) for uid in sorted(user_ids) if uid != 53]
 
     total_ms = (time.monotonic() - req_t0) * 1000
     log.info("Dashboard total: %.0f ms", total_ms)
@@ -1404,6 +1688,10 @@ def index():
         crm_base_url=CRM_BASE_URL,
         wb_mode=wb_mode,
         unassigned_leads=unassigned_leads,
+        user_name=session.get("user_name", ""),
+        user_email=session.get("user_email", ""),
+        user_role=session.get("user_role", "user"),
+        user_id=session.get("user_id"),
     )
 
 
@@ -1415,5 +1703,250 @@ def internal_error(e):
 def service_unavailable(e):
     return render_template("error.html", error_msg="Database temporarily unavailable. Please try again shortly."), 503
 
+# ── Monthly Report API ────────────────────────────────────────────────────────
+
+import subprocess, uuid, threading, re as _re, glob as _glob
+
+_report_jobs = {}  # job_id → {status, progress, results, error, ...}
+REPORT_SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "report_settings.json")
+
+def _load_report_settings():
+    try:
+        with open(REPORT_SETTINGS_FILE, "r") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+    # Migrate old format → new
+    if "schedules" not in data:
+        data = {"schedules": []}
+    return data
+
+def _save_report_settings(data):
+    with open(REPORT_SETTINGS_FILE, "w") as f: json.dump(data, f)
+
+
+@app.route("/api/report/practices")
+@login_required
+def api_report_practices():
+    """All active practices with their advisers for the report modal."""
+    from flask import jsonify
+    conn = get_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT ug.id AS practice_id, ug.name AS practice_name,
+                   au.id AS user_id, CONCAT(au.first_name,' ',au.last_name) AS adviser_name
+            FROM account_usergroup ug
+            JOIN account_usergroup_users ugu ON ugu.usergroup_id = ug.id
+            JOIN auth_user au ON au.id = ugu.user_id AND au.is_active = 1
+            JOIN account_userrole_users aru ON aru.user_id = au.id AND aru.userrole_id = 2
+            WHERE ug.real = 1 AND ug.is_active = 1
+              AND ugu.user_id NOT IN (88, 118, 172)
+              AND LOWER(ug.name) NOT LIKE '%%test%%'
+            ORDER BY ug.name, au.first_name, au.last_name
+        """)
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
+
+    practices = {}
+    for r in rows:
+        pid = r["practice_id"]
+        if pid not in practices:
+            practices[pid] = {"id": pid, "name": r["practice_name"], "advisers": []}
+        practices[pid]["advisers"].append({"id": r["user_id"], "name": r["adviser_name"].strip()})
+
+    return jsonify({"ok": True, "practices": list(practices.values())})
+
+
+@app.route("/api/report/generate", methods=["POST"])
+@login_required
+def api_report_generate():
+    from flask import jsonify
+    data = request.get_json(force=True) or {}
+    month = int(data.get("month", 0))
+    year  = int(data.get("year", 0))
+    user_ids = data.get("user_ids", [])   # list of adviser IDs
+
+    if not month or not year:
+        return jsonify({"ok": False, "error": "month and year required"}), 400
+    if not user_ids:
+        return jsonify({"ok": False, "error": "No advisers selected"}), 400
+
+    job_id = str(uuid.uuid4())[:8]
+    _report_jobs[job_id] = {
+        "status": "running", "progress": 0, "total": len(user_ids),
+        "results": [], "error": None,
+    }
+
+    def _run():
+        try:
+            script = os.path.join(os.path.dirname(__file__), "monthly_report", "run_pipeline.py")
+            output_dir = os.path.join(os.path.dirname(__file__), "monthly_report", "output")
+            results = []
+            for i, uid in enumerate(user_ids):
+                _report_jobs[job_id]["current_adviser"] = uid
+                cmd = [sys.executable, script, "--user_id", str(uid),
+                       "--month", str(month), "--year", str(year),
+                       "--output_dir", output_dir]
+                # Pass Anthropic API key for AI narrative generation
+                _api_key = os.getenv("ANTHROPIC_API_KEY", "")
+                if _api_key:
+                    cmd.extend(["--api_key", _api_key])
+                # Snapshot existing PDFs before this run
+                existing_pdfs = set()
+                for pat in ["adviser_report_*.pdf", "practice_report_*.pdf"]:
+                    for fp in _glob.glob(os.path.join(output_dir, pat)):
+                        existing_pdfs.add(os.path.basename(fp))
+
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+                # Surface subprocess errors instead of silently swallowing them
+                if proc.returncode != 0:
+                    err_msg = proc.stderr.strip()[-500:] if proc.stderr else f"Exit code {proc.returncode}"
+                    _report_jobs[job_id].update(status="error",
+                        error=f"Report failed for adviser {uid}: {err_msg}")
+                    return
+
+                # Extract PDF paths from subprocess stdout
+                pdfs = _re.findall(r'Saved.+?→\s*(.+?\.pdf)', proc.stdout)
+                if not pdfs:
+                    pdfs = _re.findall(r'✅\s*(.+?):\s*(.+?\.pdf)', proc.stdout)
+                    pdfs = [p[1] for p in pdfs] if pdfs else []
+                seen = set()
+                for pdf in pdfs:
+                    fname = os.path.basename(pdf.strip())
+                    if fname not in seen and (fname.startswith("adviser_report_") or fname.startswith("practice_report_")):
+                        seen.add(fname)
+                        # Clean display name: strip timestamp suffix for readability
+                        display = _re.sub(r'_\d{14}\.pdf$', '.pdf', fname)
+                        results.append({"name": display, "file": fname})
+
+                # Fallback: detect NEW PDFs in output dir if stdout parsing missed them
+                if not seen:
+                    for pat in ["adviser_report_*.pdf", "practice_report_*.pdf"]:
+                        for fp in _glob.glob(os.path.join(output_dir, pat)):
+                            fname = os.path.basename(fp)
+                            if fname not in existing_pdfs and fname not in seen:
+                                seen.add(fname)
+                                display = _re.sub(r'_\d{14}\.pdf$', '.pdf', fname)
+                                results.append({"name": display, "file": fname})
+
+                # Update progress AFTER subprocess completes, not before
+                _report_jobs[job_id]["progress"] = i + 1
+
+            _report_jobs[job_id].update(status="done", results=results,
+                                        progress=len(user_ids), total=len(user_ids))
+        except subprocess.TimeoutExpired:
+            _report_jobs[job_id].update(status="error", error="Report generation timed out")
+        except Exception as e:
+            _report_jobs[job_id].update(status="error", error=str(e))
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"ok": True, "job_id": job_id})
+
+
+@app.route("/api/report/status/<job_id>")
+@login_required
+def api_report_status(job_id):
+    from flask import jsonify
+    job = _report_jobs.get(job_id)
+    if not job:
+        return jsonify({"ok": False, "error": "Job not found"}), 404
+    return jsonify({"ok": True, **job})
+
+
+@app.route("/api/report/download/<path:filename>")
+@login_required
+def api_report_download(filename):
+    from flask import send_from_directory
+    output_dir = os.path.join(os.path.dirname(__file__), "monthly_report", "output")
+    return send_from_directory(output_dir, filename, as_attachment=True)
+
+
+@app.route("/api/report/list")
+@login_required
+def api_report_list():
+    """List generated reports in the output directory."""
+    from flask import jsonify
+    output_dir = os.path.join(os.path.dirname(__file__), "monthly_report", "output")
+    files = []
+    all_matches = []
+    for pattern in ["adviser_report_*.pdf", "practice_report_*.pdf"]:
+        all_matches.extend(_glob.glob(os.path.join(output_dir, pattern)))
+    for f in sorted(all_matches, key=os.path.getmtime, reverse=True):
+        stat = os.stat(f)
+        files.append({
+            "file": os.path.basename(f),
+            "size_kb": round(stat.st_size / 1024),
+            "created": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
+        })
+    return jsonify({"ok": True, "reports": files})
+
+
+@app.route("/api/report/delete/<path:filename>", methods=["DELETE"])
+@login_required
+def api_report_delete(filename):
+    """Delete a generated report PDF."""
+    from flask import jsonify
+    # Only allow deleting real report files
+    if not (filename.startswith("adviser_report_") or filename.startswith("practice_report_")) or not filename.endswith(".pdf"):
+        return jsonify({"ok": False, "error": "Invalid filename"}), 400
+    output_dir = os.path.join(os.path.dirname(__file__), "monthly_report", "output")
+    filepath = os.path.join(output_dir, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"ok": False, "error": "File not found"}), 404
+    os.remove(filepath)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/report/schedules", methods=["GET", "POST"])
+@login_required
+def api_report_schedules():
+    from flask import jsonify
+    settings = _load_report_settings()
+
+    if request.method == "GET":
+        return jsonify({"ok": True, "schedules": settings.get("schedules", [])})
+
+    # POST — create new schedule
+    data = request.get_json(force=True) or {}
+    entry = {
+        "id": str(uuid.uuid4()),
+        "practices": data.get("practices", []),
+        "advisers": data.get("advisers", []),
+        "day_of_month": data.get("day_of_month", 1),
+        "enabled": data.get("enabled", True),
+        "created": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+    settings["schedules"].append(entry)
+    _save_report_settings(settings)
+    return jsonify({"ok": True, "schedule": entry})
+
+
+@app.route("/api/report/schedules/<schedule_id>", methods=["PATCH", "DELETE"])
+@login_required
+def api_report_schedule_item(schedule_id):
+    from flask import jsonify
+    settings = _load_report_settings()
+    schedules = settings.get("schedules", [])
+
+    if request.method == "DELETE":
+        settings["schedules"] = [s for s in schedules if s.get("id") != schedule_id]
+        _save_report_settings(settings)
+        return jsonify({"ok": True})
+
+    # PATCH — toggle enabled
+    data = request.get_json(force=True) or {}
+    for s in schedules:
+        if s.get("id") == schedule_id:
+            if "enabled" in data:
+                s["enabled"] = bool(data["enabled"])
+            break
+    _save_report_settings(settings)
+    return jsonify({"ok": True})
+
+
 if __name__=="__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5001,
+            exclude_patterns=["**/monthly_report/**"])

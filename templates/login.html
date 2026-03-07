@@ -3,35 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AXIS — Sign In</title>
+<title>The Laboratory — Sign In</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{--g50:#F9FAFB}
-  body{font-family:'Inter',sans-serif;background:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-  .login-wrap{width:100%;max-width:420px}
-  .card{background:#fff;border-radius:16px;padding:36px 40px 40px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.07);border:1px solid #EAECF0}
-  .logo-wrap{display:flex;justify-content:center;margin-bottom:32px}
+  body{font-family:'Inter',sans-serif;background:var(--g50);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  .card{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.07);border:1px solid #EAECF0}
+  .logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:32px}
   h1{font-size:18px;font-weight:700;color:#101828;margin-bottom:6px;text-align:center}
   .subtitle{font-size:13px;color:#667085;margin-bottom:28px;text-align:center}
   label{display:block;font-size:13px;font-weight:600;color:#344054;margin-bottom:6px}
-  input[type=password]{width:100%;height:42px;padding:0 14px;border:1px solid #D0D5DD;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;color:#101828;outline:none;transition:border-color .15s,box-shadow .15s}
-  input[type=password]:focus{border-color:#D7490D;box-shadow:0 0 0 3px rgba(215,73,13,.12)}
+  input[type=email],input[type=password]{width:100%;height:42px;padding:0 14px;border:1px solid #D0D5DD;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;color:#101828;outline:none;transition:border-color .15s,box-shadow .15s}
+  input[type=email]:focus,input[type=password]:focus{border-color:#D34108;box-shadow:0 0 0 3px rgba(211,65,8,.12)}
+  .field{margin-bottom:14px}
   .error{background:#FEF3F2;border:1px solid #FECDCA;border-radius:8px;padding:10px 14px;font-size:13px;color:#B42318;margin-top:12px}
-  button{width:100%;height:42px;background:#D7490D;color:#fff;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px;transition:opacity .15s}
+  button{width:100%;height:42px;background:#D34108;color:#fff;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:16px;transition:opacity .15s}
   button:hover{opacity:.88}
-  .loading-overlay{display:none;position:fixed;inset:0;background:rgba(27,29,35,.92);backdrop-filter:blur(4px);z-index:3000;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+  .loading-overlay{display:none;position:fixed;inset:0;background:rgba(27,29,35,.82);backdrop-filter:blur(4px);z-index:3000;align-items:center;justify-content:center;flex-direction:column;gap:16px}
   .loading-overlay.active{display:flex}
-  .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:#D7490D;border-radius:50%;animation:spin .7s linear infinite}
+  .spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.2);border-top-color:#D34108;border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .loading-text{color:#fff;font-size:14px;font-weight:500;opacity:.8}
 </style>
 </head>
 <body>
-
-<div class="login-wrap">
 <div class="card">
   <div class="logo-wrap">
     <svg height="30" viewBox="0 0 119 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -47,16 +45,20 @@
       <path fill="#d7490d" d="M99.33,26.37h14.01c1.89,0,5.66-1.25,5.66-6.23s-3.78-6.13-5.66-6.09h-7.93c-.43,0-2.41-.42-2.41-2.69s1.7-2.69,2.41-2.69h13.59v-3.54h-14.3c-1.84,0-5.38,1.27-5.38,6.23,0,3.96,3.54,6.51,5.38,6.51h8.63c.66,0,1.98.45,1.98,2.26s-1.32,2.45-1.98,2.55h-14.01v3.68Z"/>
     </svg>
   </div>
-  <h1>Performance Dashboard</h1>
-  <p class="subtitle">Enter the team password to continue.</p>
+  <p class="subtitle">Sign in with your email and password.</p>
   <form method="POST" id="login-form">
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" placeholder="••••••••" autofocus autocomplete="current-password">
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="you@example.com" autofocus autocomplete="email" value="{{ request.form.get('email','') }}">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
     <button type="submit">Sign in →</button>
   </form>
 </div>
-</div><!-- /login-wrap -->
 
 <div class="loading-overlay" id="loading-overlay">
   <div class="spinner"></div>
@@ -65,7 +67,7 @@
 
 <script>
 document.getElementById('login-form').addEventListener('submit', function(){
-  if(document.getElementById('password').value.length > 0){
+  if(document.getElementById('email').value.length > 0 && document.getElementById('password').value.length > 0){
     document.getElementById('loading-overlay').classList.add('active');
   }
 });
