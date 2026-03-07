@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ══════════════════════════════════════════════════════
+     GLOBAL STYLES — Change anything here to restyle the
+     entire report in one place.
+     ══════════════════════════════════════════════════════ */
+  @page {
+    size: A4;
+    margin: 18mm 22mm 22mm 22mm;
+    @bottom-center {
+      content: "SLG CRM Intelligence Report  |  Page " counter(page);
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #999;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #222;
+  }
+
+  /* ── Page break control ── */
+  .page-break { page-break-before: always; }
+  .no-break   { page-break-inside: avoid; }
+
+  /* ── Header block (logo + company info) ── */
+  .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6mm;
+    padding-bottom: 3mm;
+    border-bottom: 1px solid #ddd;
+  }
+  .logo-area {
+    width: 50mm;
+    height: 18mm;
+    background: #1B2A4A;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 9pt;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .company-info {
+    text-align: right;
+    font-size: 8.5pt;
+    color: #666;
+    line-height: 1.6;
+  }
+
+  /* ── Report title ── */
+  .report-title {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #111;
+    text-align: center;
+    margin: 5mm 0 4mm 0;
+    letter-spacing: -0.3px;
+  }
+
+  /* ── Meta block (Prepared by / For / Date) ── */
+  .meta-block {
+    margin-bottom: 5mm;
+    font-size: 9.5pt;
+    line-height: 1.7;
+  }
+  .meta-block strong { color: #111; }
+
+  /* ── Section headings ── */
+  h2 {
+    font-size: 15pt;
+    font-weight: 700;
+    color: #111;
+    border-bottom: 2px solid #111;
+    padding-bottom: 2mm;
+    margin-top: 6mm;
+    margin-bottom: 2mm;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #222;
+    margin-top: 3mm;
+    margin-bottom: 1.5mm;
+    page-break-after: avoid;
+  }
+
+  h4 {
+    font-size: 10pt;
+    font-weight: 600;
+    font-style: italic;
+    color: #333;
+    margin-top: 4mm;
+    margin-bottom: 2mm;
+  }
+
+  /* ── Body text ── */
+  p {
+    margin-bottom: 2mm;
+    text-align: left;
+  }
+
+  .highlight {
+    font-weight: 700;
+    color: #1B2A4A;
+  }
+  .green { color: #2E7D32; font-weight: 700; }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2mm 0 3mm 0;
+    font-size: 9pt;
+  }
+  table th {
+    background: #1B2A4A;
+    color: white;
+    font-weight: 600;
+    text-align: left;
+    padding: 2.5mm 3mm;
+    font-size: 8.5pt;
+  }
+  table td {
+    padding: 2mm 3mm;
+    border-bottom: 0.5px solid #ddd;
+    vertical-align: top;
+  }
+  table tr:nth-child(even) td { background: #f9f9f9; }
+  table tr.total-row td {
+    font-weight: 700;
+    border-top: 1.5px solid #111;
+    background: transparent;
+  }
+
+  /* ── KPI Cards row ── */
+  .kpi-row {
+    display: flex;
+    gap: 4mm;
+    margin: 3mm 0 4mm 0;
+  }
+  .kpi-card {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 3mm 4mm;
+    text-align: center;
+  }
+  .kpi-card .label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #666;
+    margin-bottom: 1mm;
+  }
+  .kpi-card .value {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #1B2A4A;
+  }
+  .kpi-card .sub {
+    font-size: 7.5pt;
+    color: #888;
+    font-style: italic;
+    margin-top: 0.5mm;
+  }
+
+  /* ── Charts ── */
+  .chart-container {
+    text-align: center;
+    margin: 3mm 0;
+  }
+  .chart-container img {
+    max-width: 100%;
+    max-height: 75mm;
+    height: auto;
+  }
+  .chart-container.small img {
+    max-height: 55mm;
+  }
+  .chart-container.large img {
+    max-height: 90mm;
+  }
+
+  /* ── Bullet list with star markers ── */
+  .star-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 3mm 0;
+  }
+  .star-list li {
+    padding: 1.5mm 0 1.5mm 6mm;
+    position: relative;
+    line-height: 1.5;
+  }
+  .star-list li::before {
+    content: "★";
+    position: absolute;
+    left: 0;
+    color: #D4A843;
+  }
+
+  /* ── Milestone banner ── */
+  .milestone-banner {
+    text-align: center;
+    padding: 5mm;
+    margin: 6mm 0;
+    border-top: 2px solid #111;
+    border-bottom: 2px solid #111;
+  }
+  .milestone-banner .title {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1B2A4A;
+  }
+  .milestone-banner .sub {
+    font-size: 10pt;
+    color: #555;
+    margin-top: 1mm;
+  }
+
+  /* ── Divider ── */
+  hr.section-divider {
+    border: none;
+    border-top: 0.5px solid #ccc;
+    margin: 5mm 0;
+  }
+
+  /* ── Footnote / italic note ── */
+  .note {
+    font-style: italic;
+    color: #555;
+    font-size: 9pt;
+    margin: 2mm 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     HEADER — Appears on first page only
+     ══════════════════════════════════════════════════════ -->
+<div class="report-header">
+  <div class="logo-area">SLG</div>
+  <div class="company-info">
+    {{ company_email or 'reports@slg.com.au' }}<br>
+    {{ company_website or 'www.slg.com.au' }}<br>
+    {{ company_phone or '' }}
+  </div>
+</div>
+
+<!-- ── Title ── -->
+<div class="report-title">Monthly Performance Report</div>
+
+<!-- ── Meta ── -->
+<div class="meta-block">
+  <strong>Prepared for:</strong> {{ adviser_name }}<br>
+  <strong>Practice:</strong> {{ practice_name }}<br>
+  <strong>Date:</strong> {{ report_date }}
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     1. EXECUTIVE SUMMARY
+     ══════════════════════════════════════════════════════ -->
+<h2>1. Executive Summary</h2>
+
+<h3>A. Overview</h3>
+<p>
+  This report covers <strong>{{ report_month_name }}</strong> performance for
+  {{ adviser_name }} at {{ practice_name }}. It draws on CRM data across
+  applications, leads, conversion rates, and pipeline activity.
+</p>
+
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Total Submitted</div>
+    <div class="value">${{ "{:,.0f}".format(total_premium) }}</div>
+    <div class="sub">{{ premium_milestone or '' }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Applications</div>
+    <div class="value">{{ total_apps }}</div>
+    <div class="sub">{{ apps_note or '' }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Avg Premium</div>
+    <div class="value">${{ "{:,.0f}".format(avg_premium) }}</div>
+    <div class="sub">{{ avg_note or '' }}</div>
+  </div>
+</div>
+
+<h3>B. What's Driving This</h3>
+<p>{{ driving_text }}</p>
+
+
+<!-- ══════════════════════════════════════════════════════
+     2. 12-MONTH PERFORMANCE TREND
+     ══════════════════════════════════════════════════════ -->
+<h2>2. 12-Month Performance Trend</h2>
+
+<h3>A. Premium &amp; Volume Chart</h3>
+<div class="chart-container">
+  <img src="{{ trend_chart }}" alt="12-month trend" />
+</div>
+
+<p class="note">{{ trend_avg_text }}</p>
+
+<h3>B. Monthly Breakdown</h3>
+<table>
+  <thead>
+    <tr><th>Month</th><th>Apps</th><th>Total Premium</th></tr>
+  </thead>
+  <tbody>
+    {% for m in monthly_data %}
+    <tr{% if m.is_current %} class="total-row"{% endif %}>
+      <td>{{ m.month }}</td>
+      <td>{{ m.apps }}</td>
+      <td>${{ "{:,.0f}".format(m.premium) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════
+     3. LICENSEE BENCHMARKING
+     ══════════════════════════════════════════════════════ -->
+<h2>3. How You Compare – Licensee Benchmarking</h2>
+
+<h3>A. Your Percentile Ranking</h3>
+<p>{{ benchmark_intro }}</p>
+
+<table>
+  <thead>
+    <tr><th>Metric</th><th>You ({{ practice_name }})</th><th>Network Average</th><th>Median Practice</th><th>Top Quartile</th></tr>
+  </thead>
+  <tbody>
+    {% for row in benchmark_table %}
+    <tr>
+      <td>{{ row.metric }}</td>
+      <td><strong>{{ row.you }}</strong></td>
+      <td>{{ row.network }}</td>
+      <td>{{ row.median }}</td>
+      <td>{{ row.top_q }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>B. Distribution Chart</h3>
+<div class="chart-container">
+  <img src="{{ benchmark_chart }}" alt="Benchmarking distribution" />
+</div>
+
+<p>{{ benchmark_narrative }}</p>
+
+
+<!-- ══════════════════════════════════════════════════════
+     4. REFERRAL PARTNER PERFORMANCE
+     ══════════════════════════════════════════════════════ -->
+<h2>4. Referral Partner Performance</h2>
+
+<h3>A. Partner Breakdown</h3>
+<div class="chart-container">
+  <img src="{{ referral_chart }}" alt="Referral partner breakdown" />
+</div>
+
+<h3>B. Detail</h3>
+<table>
+  <thead>
+    <tr><th>Source</th><th>Apps</th><th>Premium</th><th>Avg Case</th><th>Conv. Rate</th></tr>
+  </thead>
+  <tbody>
+    {% for r in referral_table %}
+    <tr>
+      <td>{{ r.source }}</td>
+      <td>{{ r.apps }}</td>
+      <td>${{ "{:,.0f}".format(r.premium) }}</td>
+      <td>${{ "{:,.0f}".format(r.avg_case) }}</td>
+      <td>{{ r.conv_rate }}%</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p>{{ referral_narrative }}</p>
+
+
+<!-- ══════════════════════════════════════════════════════
+     5. INSURER DIVERSIFICATION & SUBMISSIONS DETAIL
+     ══════════════════════════════════════════════════════ -->
+<h2>5. Insurer Diversification &amp; Submissions</h2>
+
+<h3>A. Insurer Mix</h3>
+<div class="chart-container small">
+  <img src="{{ insurer_chart }}" alt="Insurer diversification" />
+</div>
+<p>{{ insurer_narrative }}</p>
+
+<h3>B. {{ report_month_name }} Submissions – Full Detail</h3>
+
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Commenced Premium</div>
+    <div class="value">${{ "{:,.0f}".format(commenced_premium) }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">In-Progress</div>
+    <div class="value">${{ "{:,.0f}".format(in_progress_premium) }}</div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Client</th><th>Premium</th><th>Insurer</th><th>Status</th><th>Products</th><th>Date</th></tr>
+  </thead>
+  <tbody>
+    {% for a in submissions_table %}
+    <tr>
+      <td>{{ a.client }}</td>
+      <td>${{ "{:,.0f}".format(a.premium) }}</td>
+      <td>{{ a.insurer }}</td>
+      <td>{{ a.status }}</td>
+      <td>{{ a.products }}</td>
+      <td>{{ a.date }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if submissions_footnote %}
+<p class="note">{{ submissions_footnote }}</p>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════
+     6. SPEED-TO-CONTACT CONVERSION ANALYSIS
+     ══════════════════════════════════════════════════════ -->
+<h2>6. Speed-to-Contact Conversion Analysis</h2>
+
+<h3>A. Conversion &amp; Case Value by Call Activity</h3>
+<div class="chart-container">
+  <img src="{{ speed_chart }}" alt="Speed-to-contact analysis" />
+</div>
+
+<p>{{ speed_narrative }}</p>
+
+
+<!-- ══════════════════════════════════════════════════════
+     7. IN-PROGRESS COMPLETION FORECAST
+     ══════════════════════════════════════════════════════ -->
+<h2>7. In-Progress Completion Forecast</h2>
+
+<h3>A. Historical Completion Pattern</h3>
+<div class="chart-container">
+  <img src="{{ completion_chart }}" alt="Completion forecast" />
+</div>
+
+<p class="note">{{ completion_hist_text }}</p>
+
+<h3>B. Applied to {{ report_month_name }}</h3>
+<p>{{ completion_forecast_text }}</p>
+
+
+<!-- ══════════════════════════════════════════════════════
+     8. REMAINING QUOTED PIPELINE
+     ══════════════════════════════════════════════════════ -->
+<h2>8. Remaining Quoted Pipeline</h2>
+
+<h3>A. Top Quoted Leads</h3>
+<p>Quoted leads with no application yet – additional upside beyond the ${{ "{:,.0f}".format(total_premium) }} already submitted.</p>
+
+<table>
+  <thead>
+    <tr><th>Client</th><th>Quoted</th><th>Referral Partner</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    {% for p in pipeline_table %}
+    <tr>
+      <td>{{ p.client }}</td>
+      <td>${{ "{:,.0f}".format(p.quoted) }}</td>
+      <td>{{ p.source }}</td>
+      <td>{{ p.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p><strong>Total top-{{ pipeline_table|length }} pipeline value: ${{ "{:,.0f}".format(pipeline_total) }}.</strong> {{ pipeline_narrative }}</p>
+
+<h3>B. Your Strongest Predictor: Getting to a Quote</h3>
+<p>{{ predictor_narrative }}</p>
+
+<div class="chart-container">
+  <img src="{{ pipeline_engagement_chart }}" alt="Pipeline by engagement level" />
+</div>
+
+<p class="note">{{ predictor_closing }}</p>
+
+
+<!-- ══════════════════════════════════════════════════════
+     9. WHAT YOUR DATA SAYS WORKS
+     ══════════════════════════════════════════════════════ -->
+<h2>9. What Your Data Says Works</h2>
+
+<h3>A. Conversion Drivers</h3>
+<p>{{ data_works_intro }}</p>
+
+<div class="chart-container">
+  <img src="{{ conversion_driver_chart }}" alt="Conversion drivers" />
+</div>
+
+<h3>B. Your Best Conversion Driver: Repeated Contact</h3>
+<p>{{ repeated_contact_text }}</p>
+
+<table>
+  <thead>
+    <tr><th>Call Activity</th><th>Your Conv. Rate</th><th>Avg Case Value</th><th>Leads Currently Here</th></tr>
+  </thead>
+  <tbody>
+    {% for row in conversion_table %}
+    <tr{% if row.is_highlight %} class="total-row"{% endif %}>
+      <td>{{ row.calls }}</td>
+      <td>{{ row.conv_rate }}%</td>
+      <td>${{ "{:,.0f}".format(row.avg_case) }}</td>
+      <td>{{ row.leads or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p>{{ conversion_closing }}</p>
+
+
+<!-- ══════════════════════════════════════════════════════
+     10. WHAT STANDS OUT & NEXT STEPS
+     ══════════════════════════════════════════════════════ -->
+<h2>10. What Stands Out This Month</h2>
+
+{% if crm_note %}
+<h3>A. A Note on CRM Logging</h3>
+<p>{{ crm_note }}</p>
+
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Untouched Leads</div>
+    <div class="value green">{{ untouched_leads }}</div>
+    <div class="sub">Converting at {{ untouched_conv_rate }}%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Stale Quotes</div>
+    <div class="value green">{{ stale_quotes }}</div>
+    <div class="sub">Your quoted conv. rate: {{ quoted_conv_rate }}%</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Est. Pipeline Value</div>
+    <div class="value green">${{ est_pipeline_value }}</div>
+    <div class="sub">Using your own conversion rates</div>
+  </div>
+</div>
+{% endif %}
+
+<p>{{ formula_text }}</p>
+
+<h3>{% if crm_note %}B{% else %}A{% endif %}. Key Highlights</h3>
+<ul class="star-list">
+  {% for item in highlights %}
+  <li><strong>{{ item.title }}</strong> – {{ item.detail }}</li>
+  {% endfor %}
+</ul>
+
+<!-- ── Milestone Banner ── -->
+{% if milestone_text %}
+<div class="milestone-banner">
+  <div class="title">{{ milestone_text }}</div>
+  <div class="sub">{{ milestone_sub }}</div>
+</div>
+{% endif %}
+
+</body>
+</html>

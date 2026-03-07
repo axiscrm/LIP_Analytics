@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python slack_server.py"
+restartPolicyType = "ALWAYS"
+
+[cron]
+schedule = "0 20 1 * *"
+# 8PM UTC on 1st = 6AM AEST on 2nd of each month
+# Reports use previous month's data (auto-detected)

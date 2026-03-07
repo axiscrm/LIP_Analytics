@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Laboratory — Admin</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--brand:#D7490D;--g50:#F9FAFB;--g100:#F3F4F6;--g200:#E5E7EB;--g300:#D1D5DB;--g500:#667085;--g700:#344054;--g900:#101828;--radius:8px}
+  body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);min-height:100vh}
+
+  /* ── Header ── */
+  .topbar{background:#fff;border-bottom:1px solid var(--g200);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .topbar-left{display:flex;align-items:center;gap:16px}
+  .topbar-left h1{font-size:16px;font-weight:700;color:var(--g900)}
+  .topbar-right{display:flex;align-items:center;gap:16px;font-size:13px}
+  .topbar-right a{color:var(--g500);text-decoration:none;font-weight:500;transition:color .15s}
+  .topbar-right a:hover{color:var(--brand)}
+
+  /* ── Layout ── */
+  .container{max-width:960px;margin:0 auto;padding:24px}
+
+  /* ── Cards ── */
+  .card{background:#fff;border-radius:12px;border:1px solid var(--g200);box-shadow:0 1px 3px rgba(0,0,0,.04);padding:24px;margin-bottom:20px}
+  .card h2{font-size:15px;font-weight:700;margin-bottom:16px;color:var(--g900)}
+
+  /* ── Form ── */
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .form-row.full{grid-template-columns:1fr}
+  .form-group{display:flex;flex-direction:column;gap:4px}
+  .form-group label{font-size:12px;font-weight:600;color:var(--g700)}
+  .form-group input,.form-group select{height:36px;padding:0 10px;border:1px solid var(--g300);border-radius:var(--radius);font-family:inherit;font-size:13px;color:var(--g900);outline:none;transition:border-color .15s}
+  .form-group input:focus,.form-group select:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(215,73,13,.12)}
+  .adviser-checks{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .adviser-checks label{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:500;color:var(--g700);cursor:pointer;padding:4px 10px;border:1px solid var(--g300);border-radius:6px;transition:all .15s;user-select:none}
+  .adviser-checks label:has(input:checked){background:rgba(215,73,13,.08);border-color:var(--brand);color:var(--brand)}
+  .adviser-checks input[type=checkbox]{display:none}
+  .btn{height:34px;padding:0 16px;border:none;border-radius:var(--radius);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+  .btn:hover{opacity:.85}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-secondary{background:var(--g100);color:var(--g700);border:1px solid var(--g300)}
+  .btn-danger{background:#FEF3F2;color:#B42318;border:1px solid #FECDCA}
+  .btn-sm{height:28px;padding:0 10px;font-size:12px}
+
+  /* ── Table ── */
+  .user-table{width:100%;border-collapse:collapse;font-size:13px}
+  .user-table th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--g500);padding:8px 12px;border-bottom:1px solid var(--g200)}
+  .user-table td{padding:10px 12px;border-bottom:1px solid var(--g100);vertical-align:middle}
+  .user-table tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase}
+  .badge-admin{background:rgba(215,73,13,.1);color:var(--brand)}
+  .badge-user{background:var(--g100);color:var(--g500)}
+  .badge-inactive{background:#FEF3F2;color:#B42318}
+  .advisers-cell{font-size:12px;color:var(--g500);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+
+  /* ── Modal ── */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center}
+  .modal-bg.active{display:flex}
+  .modal{background:#fff;border-radius:12px;padding:24px;width:90%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+  .modal h3{font-size:15px;font-weight:700;margin-bottom:16px}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+  /* ── Toast ── */
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--g900);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:300;opacity:0;transform:translateY(10px);transition:all .3s}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>Admin</h1>
+  </div>
+  <div class="topbar-right">
+    <a href="/">← Dashboard</a>
+    <a href="/logout">Sign Out</a>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Add User -->
+  <div class="card">
+    <h2>Add User</h2>
+    <form id="add-user-form" onsubmit="return createUser(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="nu-email" required placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="nu-name" required placeholder="Full name">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="nu-password" required placeholder="••••••••" minlength="4">
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="nu-role"><option value="user">User</option><option value="admin">Admin</option></select>
+        </div>
+      </div>
+      <label style="font-size:12px;font-weight:600;color:var(--g700);margin-bottom:6px;display:block">Advisers</label>
+      <div class="adviser-checks" id="nu-advisers">
+        {% for a in all_advisers %}
+        <label><input type="checkbox" value="{{ a.id }}" checked> {{ a.name }}</label>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary">Create User</button>
+    </form>
+  </div>
+
+  <!-- User List -->
+  <div class="card">
+    <h2>Users</h2>
+    <table class="user-table">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Advisers</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="user-tbody">
+        {% for u in users %}
+        <tr data-uid="{{ u.id }}">
+          <td class="u-name">{{ u.name }}</td>
+          <td class="u-email">{{ u.email }}</td>
+          <td><span class="badge {% if u.role == 'admin' %}badge-admin{% else %}badge-user{% endif %}">{{ u.role }}</span></td>
+          <td class="advisers-cell" title="{{ u.adviser_ids or '' }}">{{ u.adviser_ids or '—' }}</td>
+          <td>{% if u.is_active %}<span style="color:#10b981;font-weight:600;font-size:12px">Active</span>{% else %}<span class="badge badge-inactive">Inactive</span>{% endif %}</td>
+          <td class="actions">
+            <button class="btn btn-secondary btn-sm" onclick="openEdit({{ u.id }})">Edit</button>
+            <button class="btn btn-secondary btn-sm" onclick="openResetPw({{ u.id }})">Reset PW</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser({{ u.id }},'{{ u.email }}')">Delete</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <h3>Edit User</h3>
+    <input type="hidden" id="ed-uid">
+    <div class="form-row">
+      <div class="form-group"><label>Name</label><input type="text" id="ed-name"></div>
+      <div class="form-group"><label>Role</label><select id="ed-role"><option value="user">User</option><option value="admin">Admin</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Active</label><select id="ed-active"><option value="1">Active</option><option value="0">Inactive</option></select></div>
+    </div>
+    <label style="font-size:12px;font-weight:600;color:var(--g700);margin-bottom:6px;display:block">Advisers</label>
+    <div class="adviser-checks" id="ed-advisers">
+      {% for a in all_advisers %}
+      <label><input type="checkbox" value="{{ a.id }}"> {{ a.name }}</label>
+      {% endfor %}
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('edit-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset PW Modal -->
+<div class="modal-bg" id="pw-modal">
+  <div class="modal">
+    <h3>Reset Password</h3>
+    <input type="hidden" id="pw-uid">
+    <div class="form-group"><label>New Password</label><input type="password" id="pw-new" minlength="4" placeholder="••••••••"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('pw-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveResetPw()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Adviser map for display ── */
+const ADV_MAP = { {% for a in all_advisers %}"{{ a.id }}":"{{ a.name }}"{% if not loop.last %},{% endif %}{% endfor %} };
+/* ── User data cache ── */
+const USERS = {};
+{% for u in users %}
+USERS[{{ u.id }}] = {id:{{ u.id }}, email:"{{ u.email }}", name:"{{ u.name }}", role:"{{ u.role }}", adviser_ids:"{{ u.adviser_ids or '' }}", is_active:{{ u.is_active }}};
+{% endfor %}
+
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+function closeModal(id){document.getElementById(id).classList.remove('active')}
+
+function adviserNames(csv){
+  if(!csv)return '—';
+  return csv.split(',').map(id=>ADV_MAP[id.trim()]||id.trim()).join(', ');
+}
+
+/* ── Create user ── */
+function createUser(e){
+  e.preventDefault();
+  const email=document.getElementById('nu-email').value.trim();
+  const name=document.getElementById('nu-name').value.trim();
+  const password=document.getElementById('nu-password').value;
+  const role=document.getElementById('nu-role').value;
+  const checks=[...document.querySelectorAll('#nu-advisers input:checked')].map(c=>c.value);
+  const adviser_ids=checks.join(',');
+
+  fetch('/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email,name,password,role,adviser_ids})
+  }).then(r=>r.json()).then(d=>{
+    if(!d.ok){toast('Error: '+d.error);return}
+    USERS[d.user.id]=d.user;
+    // Append row
+    const tr=document.createElement('tr');tr.dataset.uid=d.user.id;
+    const roleBadge=d.user.role==='admin'?'badge-admin':'badge-user';
+    tr.innerHTML=`
+      <td class="u-name">${d.user.name}</td>
+      <td class="u-email">${d.user.email}</td>
+      <td><span class="badge ${roleBadge}">${d.user.role}</span></td>
+      <td class="advisers-cell" title="${d.user.adviser_ids}">${adviserNames(d.user.adviser_ids)}</td>
+      <td><span style="color:#10b981;font-weight:600;font-size:12px">Active</span></td>
+      <td class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="openEdit(${d.user.id})">Edit</button>
+        <button class="btn btn-secondary btn-sm" onclick="openResetPw(${d.user.id})">Reset PW</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser(${d.user.id},'${d.user.email}')">Delete</button>
+      </td>`;
+    document.getElementById('user-tbody').appendChild(tr);
+    document.getElementById('add-user-form').reset();
+    // Re-check all adviser checkboxes
+    document.querySelectorAll('#nu-advisers input').forEach(c=>c.checked=true);
+    toast('User created');
+  }).catch(()=>toast('Network error'));
+  return false;
+}
+
+/* ── Edit user ── */
+function openEdit(uid){
+  const u=USERS[uid]; if(!u)return;
+  document.getElementById('ed-uid').value=uid;
+  document.getElementById('ed-name').value=u.name;
+  document.getElementById('ed-role').value=u.role;
+  document.getElementById('ed-active').value=u.is_active?'1':'0';
+  const ids=new Set((u.adviser_ids||'').split(',').map(s=>s.trim()));
+  document.querySelectorAll('#ed-advisers input').forEach(c=>c.checked=ids.has(c.value));
+  document.getElementById('edit-modal').classList.add('active');
+}
+function saveEdit(){
+  const uid=parseInt(document.getElementById('ed-uid').value);
+  const name=document.getElementById('ed-name').value.trim();
+  const role=document.getElementById('ed-role').value;
+  const is_active=document.getElementById('ed-active').value==='1';
+  const checks=[...document.querySelectorAll('#ed-advisers input:checked')].map(c=>c.value);
+  const adviser_ids=checks.join(',');
+
+  fetch(`/admin/users/${uid}`,{method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,role,adviser_ids,is_active})
+  }).then(r=>r.json()).then(d=>{
+    if(!d.ok){toast('Error: '+d.error);return}
+    // Update cache
+    Object.assign(USERS[uid],{name,role,adviser_ids,is_active:is_active?1:0});
+    // Update DOM row
+    const row=document.querySelector(`tr[data-uid="${uid}"]`);
+    if(row){
+      row.querySelector('.u-name').textContent=name;
+      const badge=row.querySelector('.badge');
+      badge.textContent=role;badge.className='badge '+(role==='admin'?'badge-admin':'badge-user');
+      const ac=row.querySelectorAll('td')[3];
+      ac.textContent=adviserNames(adviser_ids);ac.title=adviser_ids;
+      const st=row.querySelectorAll('td')[4];
+      st.innerHTML=is_active?'<span style="color:#10b981;font-weight:600;font-size:12px">Active</span>':'<span class="badge badge-inactive">Inactive</span>';
+    }
+    closeModal('edit-modal');toast('User updated');
+  }).catch(()=>toast('Network error'));
+}
+
+/* ── Reset password ── */
+function openResetPw(uid){
+  document.getElementById('pw-uid').value=uid;
+  document.getElementById('pw-new').value='';
+  document.getElementById('pw-modal').classList.add('active');
+}
+function saveResetPw(){
+  const uid=document.getElementById('pw-uid').value;
+  const password=document.getElementById('pw-new').value;
+  if(!password||password.length<4){toast('Password must be at least 4 characters');return}
+  fetch(`/admin/users/${uid}/reset-password`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({password})
+  }).then(r=>r.json()).then(d=>{
+    if(!d.ok){toast('Error: '+d.error);return}
+    closeModal('pw-modal');toast('Password reset');
+  }).catch(()=>toast('Network error'));
+}
+
+/* ── Delete user ── */
+function deleteUser(uid,email){
+  if(!confirm('Delete user '+email+'? This cannot be undone.'))return;
+  fetch(`/admin/users/${uid}`,{method:'DELETE'}).then(r=>r.json()).then(d=>{
+    if(!d.ok){toast('Error: '+d.error);return}
+    delete USERS[uid];
+    const row=document.querySelector(`tr[data-uid="${uid}"]`);if(row)row.remove();
+    toast('User deleted');
+  }).catch(()=>toast('Network error'));
+}
+
+/* Close modals on backdrop click */
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('active')});
+});
+</script>
+</body>
+</html>
